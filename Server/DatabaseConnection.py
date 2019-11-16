@@ -5,12 +5,20 @@ import mysql.connector
 
 myDB = mysql.connector.connect(host="192.168.1.12", user="root ",passwd="password",database="IoTPlatform")
 mycursor=myDB.cursor()
-def select(rows="*",table="Users",condition=""):
+def select(table,rows="*",condition=""):
     mycursor.execute("SELECT "+rows+" FROM "+table+" "+condition)
     myresult =mycursor.fetchall()
     return myresult
 
-
+if __name__ == '__main__':
+        result=select(table="Users",condition="WHERE Login='abc' AND Password='abc'")
+        print(result)
+        if result.__len__()>0:
+            print ("elo1")
+        result = select(table="Users", condition="WHERE Login='abc' AND Password='abc4'")
+        if result.__len__()>0:
+            print ("elo2")
+        print(result)
 #myDB = pw.MySQLDatabase("IoTPlatform", host="192.168.1.12", port=3306, user="root", passwd="password")
 # class MySQLModel(pw.Model):
 #     """A base model that will use our MySQL database"""

@@ -7,8 +7,9 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition
+from kivy.uix.popup import Popup
+from multiprocessing import freeze_support
 
-connector=conn.Connector
 
 class LoginScreen(Screen):
     def __init__(self, **kwargs):
@@ -17,6 +18,7 @@ class LoginScreen(Screen):
         layout.cols = 2
         layout.add_widget(Label(text='User Name1'))
         self.username = TextInput(multiline=False, width=500)
+        self.username.text="elo"
         layout.add_widget(self.username)
         layout.add_widget(Label(text='password1'))
         self.password = TextInput(password=True, multiline=False)
@@ -24,10 +26,34 @@ class LoginScreen(Screen):
         loginButtonObj =Button(text='login1')
         loginButtonObj.bind(on_press=self.loginButton)
         layout.add_widget(loginButtonObj)
+        connectButtonObj = Button(text='connect to server')
+        connectButtonObj.bind(on_press=self.connectButton)
+        layout.add_widget(connectButtonObj)
         self.add_widget(layout)
 
+    def makePopup(self,title,text):
+        popuplayout = GridLayout()
+        popuplayout.cols = 1
+        popuplayout.add_widget(Label(text=text))
+        closeButton = Button(text='close')
+        popuplayout.add_widget(closeButton)
+        popup = Popup(title=title, content=popuplayout)
+        closeButton.bind(on_press=popup.dismiss)
+        popup.open()
+
+    def connectButton(self,button):
+        try:
+            conn.connectToServer()
+            self.makePopup("info","Connected")
+        except Exception as e:
+            self.makePopup("error", str(e))
+
     def loginButton(self,button):
-        connector.authenticate(self.username, self.password)
+        result=conn.authenticate(self.username.text, self.password.text)
+        if result:
+            self.parent.current='screen2'
+        else:
+            self.makePopup("error", "login/password not found")
 class RegularScreen(Screen):
     def __init__(self, **kwargs):
         super(RegularScreen, self).__init__(**kwargs)
@@ -55,14 +81,17 @@ class ConnectedScreen(Screen):
         layout.add_widget(Button(text='login3'))
         self.add_widget(layout)
 
-screenManager=ScreenManager()
-screenManager.add_widget(LoginScreen(name='screen1'))
-screenManager.add_widget(RegularScreen(name='screen2'))
-screenManager.add_widget(ConnectedScreen(name='screen3'))
-screenManager.current='screen1'
+
 class IoTPlatformClientApp(App):
     def build(self):
+        screenManager = ScreenManager()
+        screenManager.add_widget(LoginScreen(name='screen1'))
+        screenManager.add_widget(RegularScreen(name='screen2'))
+        screenManager.add_widget(ConnectedScreen(name='screen3'))
+        screenManager.current = 'screen1'
         return screenManager
 
+
 if __name__=='__main__':
+    freeze_support()
     IoTPlatformClientApp().run()

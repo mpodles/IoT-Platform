@@ -7,19 +7,20 @@ from util import *
 logger = logging.getLogger()
 
 
-def main(host='217.96.150.120', port=1100):
+def main(host='192.168.1.12', port=1100):
     sock = socket.socket(socket.AF_INET, # Internet
                          socket.SOCK_DGRAM) # UDP
 
-    for i in range(20):
+    for i in range(2):
         sock.sendto(b'0', (host, port))
 
 
+
+    data, addr = sock.recvfrom(1024)
+    print('client received: {} {}'.format(addr, data))
+    peerAddr = msg_to_addr(data)
     while True:
-        data, addr = sock.recvfrom(1024)
-        print('client received: {} {}'.format(addr, data))
-        addr = msg_to_addr(data)
-        sock.sendto(b'0', addr)
+        sock.sendto(b'0', peerAddr)
         data, addr = sock.recvfrom(1024)
         print('client received: {} {}'.format(addr, data))
 
