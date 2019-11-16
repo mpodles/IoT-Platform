@@ -8,7 +8,7 @@ from util import *
 import Server.DatabaseConnection as dc
 
 
-messengers=[]
+
 # def clientReceiver(conn,add):
 #     print("receiver started",add)
 #     while True:
@@ -28,33 +28,36 @@ messengers=[]
 #     while True:
 #         conn.recv(1024)
 
-def handleClient(conn, add):
-    newClientMessenger= msg.Messenger(conn,add)
-    messengers.append(newClientMessenger)
+# def handleClient(conn, add):
+#     newClientMessenger= msg.Messenger(conn,add)
+#     messengers.append(newClientMessenger)
+#     print(messengers)
+#
+# def handleBridge(conn, add):
+#     newClientMessenger = msg.Messenger(conn, add)
+#     messengers.append(newClientMessenger)
 
-def handleBridge(conn, add):
-    newClientMessenger = msg.Messenger(conn, add)
-    messengers.append(newClientMessenger)
+
 def listenForBridges():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('192.168.1.26', 1100))
     sock.listen()
-    processess = []
+    messengers = []
     while True:
         conn, add = sock.accept()
-        p=mp.Process(target=handleBridge,args=(conn,add))
-        p.start()
-        processess.append(p)
+        newClientMessenger = msg.Messenger(conn, add)
+        messengers.append(newClientMessenger)
+        print(messengers)
 def listenForClients():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('localhost',1101))
     sock.listen()
-    processess=[]
+    messengers=[]
     while True:
         conn, add = sock.accept()
-        p=mp.Process(target=handleClient,args=(conn,add))
-        p.start()
-        processess.append(p)
+        newClientMessenger = msg.Messenger(conn, add)
+        messengers.append(newClientMessenger)
+        print(messengers)
 
 def sendNotification():
     pass
