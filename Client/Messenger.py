@@ -26,21 +26,28 @@ class Messenger:
 
 
     def sendLoginRequest(self,login,password):
-        msg='{"ID":"'+str(self.messageId)+'","type":"authRequest","login":"'+login+'","password":"'+password+'"}'
+        msg='{"messageID":"'+str(self.messageId)+'","type":"authRequest","login":"'+login+'","password":"'+password+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
 
-    def askForDevices(self):
-        msg = '{"ID":"' + str(
-            self.messageId) + '","type":"devicesRequest"}'
+    def askForBridges(self,userID):
+        msg = '{"messageID":"' + str(
+            self.messageId) + '","type":"bridgesRequest","userID":"'+userID+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
 
-    def askForConnectionToDevice(self,device):
+    def askForBridgesDevices(self,bridgeID):
         msg = '{"ID":"' + str(
-            self.messageId) + '","type":"deviceConnectionRequest","device":"' + device + '"}'
+            self.messageId) + '","type":"devicesRequest","bridgeID":"'+bridgeID+'"}'
+        self.send_msg(msg)
+        result = self.getResult()
+        return result
+
+    def askForConnectionToDevice(self,device,natStatus):
+        msg = '{"ID":"' + str(
+            self.messageId) + '","type":"deviceConnectionRequest","device":"' + device + '","natStatus":"'+natStatus+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result

@@ -8,6 +8,8 @@ import Client.Messenger as msg
 
 global serverMessenger
 
+global bridgeMessenger
+
 def connectToServer(address='localhost',port=1101):
     global serverMessenger
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -23,12 +25,16 @@ def connectToServer(address='localhost',port=1101):
     #receiver.start()
     #sender.start()
 
-def connectToDevice(device):
-    result=serverMessenger.askForConnectionToDevice(device)
+def connectToDevice(device,natStatus):
+    result=serverMessenger.askForConnectionToDevice(device,natStatus)
 
 
-def getDevices():
-    result=serverMessenger.askForDevices()
+def getBridgesForUser(userID):
+    result=serverMessenger.askForBridges(userID)
+    return
+
+def getDevicesForBridge(bridgeID):
+    result=serverMessenger.askForBridgesDevices(bridgeID)
 
 
 def authenticate(login,password):
@@ -36,7 +42,7 @@ def authenticate(login,password):
     #waitForResult()
     print (result)
     if result["response"]=="access_granted":
-        return True
+        return int(result["UserID"])
     else:
         return False
 

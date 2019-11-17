@@ -4,6 +4,8 @@ import time
 import multiprocessing as mp
 import struct
 import Server.DatabaseConnection as dbc
+import Server.UDPServer
+
 class Messenger:
     socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     add=""
@@ -22,21 +24,50 @@ class Messenger:
     def interpretMessage(self,data):
         print("received" ,data)
         parsedData=json.loads(data)
-        msgID= int(parsedData["ID"])
+        msgID= int(parsedData["messageID"])
         self.messageId= msgID
         msgType = parsedData["type"]
         if msgType == "authRequest":
             self.handleAuthentication(parsedData)
-        elif msgType == "":
-            pass
+        elif msgType == "bridgesRequest":
+            self.handleBridgesRequest(parsedData)
+        elif msgType == "devicesRequest":
+            self.handleDevicesRequest(parsedData)
+        elif msgType == "devicesConnectionRequest":
+            self.handleDevicesConnectionRequest(parsedData)
+
+    def handleBridgesRequest(self,data):
+        userID=data["userID"]
+        result = dbc.select("Bridges", rows="*", condition='WHERE UserID="' + userID +'"')
+        dictionaryToJson={"type":"bridgesResponse","response":result}
+        msg=self.constructMessage(dictionaryToJson)
+        self.send_msg(msg)
+
+    def handleDevicesRequest(self,data):
+        deviceID=data["deviceID"]
+        result = dbc.select("Devices", rows="*", condition='WHERE DeviceID="' + deviceID +'"')
+        dictionaryToJson={"type":"devicesResponse","response":result}
+        msg=self.constructMessage(dictionaryToJson)
+        self.send_msg(msg)
+
+    def handleDevicesConnectionRequest(self,data):
+        deviceID=data["deviceID"]
+        result = dbc.select("Devices", rows="*", condition='WHERE DeviceID="' + deviceID +'"')
+
+        dictionaryToJson={"type":"devicesResponse","response":result}
+        msg=self.constructMessage(dictionaryToJson)
+        self.send_msg(msg)
+
+
 
     def handleAuthentication(self,data):
         login,password=data["login"],data["password"]
         result=dbc.select("Users",rows="*",condition='WHERE login="'+login+'" AND password="'+password+'"')
         if  result.__len__()>0:
-            dictionaryToJson = {"type":"authResponse","response":"access_granted"}
+            userID=result[0][0]
+            dictionaryToJson = {"type":"authResponse","response":"access_granted","UserID":userID}
         else:
-            dictionaryToJson = {"type": "authResponse", "response": "access_denied"}
+            dictionaryToJson = {"type": "authResponse", "response": "access_denied","UserID":"0"}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
 
