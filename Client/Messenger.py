@@ -26,28 +26,28 @@ class Messenger:
 
 
     def sendLoginRequest(self,login,password):
-        msg='{"messageID":"'+str(self.messageId)+'","type":"authRequest","login":"'+login+'","password":"'+password+'"}'
+        msg='{"messageID":"'+str(self.messageId)+'","type":"authRequest","login":"'+str(login)+'","password":"'+str(password)+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
 
     def askForBridges(self,userID):
         msg = '{"messageID":"' + str(
-            self.messageId) + '","type":"bridgesRequest","userID":"'+userID+'"}'
+            self.messageId) + '","type":"bridgesRequest","userID":"'+str(userID)+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
 
     def askForBridgesDevices(self,bridgeID):
-        msg = '{"ID":"' + str(
-            self.messageId) + '","type":"devicesRequest","bridgeID":"'+bridgeID+'"}'
+        msg = '{"messageID":"' + str(
+            self.messageId) + '","type":"devicesRequest","bridgeID":"'+str(bridgeID)+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
 
-    def askForConnectionToDevice(self,device,natStatus):
-        msg = '{"ID":"' + str(
-            self.messageId) + '","type":"deviceConnectionRequest","device":"' + device + '","natStatus":"'+natStatus+'"}'
+    def askForConnectionToDevice(self,device,behindNat):
+        msg = '{"messageID":"' + str(
+            self.messageId) + '","type":"deviceConnectionRequest","device":"' + str(device) + '","behindNat":"'+str(behindNat)+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
@@ -57,7 +57,9 @@ class Messenger:
         try:
             print("gettingResult")
             data=bytearray.decode(self.recv_msg())
+            print("result is",data)
             dictData=json.loads(data)
+            print(dictData)
             return dictData
                 # self.interpretMessage(data)
         except Exception as e:
@@ -101,14 +103,14 @@ class Messenger:
     #     # elif msgType == "":
     #     #     pass
 
-    # def receiver(self):
-    #     try:
-    #         print("receiver started")
-    #         while True:
-    #             data=bytearray.decode(self.recv_msg())
-    #             self.interpretMessage(data)
-    #     except Exception as e:
-    #         print(e)
+    def receiver(self):
+        try:
+            print("receiver started")
+            while True:
+                data=bytearray.decode(self.recv_msg())
+                self.interpretMessage(data)
+        except Exception as e:
+            print(e)
 
     # def sender(self):
     #     print("sender started")

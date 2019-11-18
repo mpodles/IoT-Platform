@@ -44,8 +44,8 @@ class Messenger:
         self.send_msg(msg)
 
     def handleDevicesRequest(self,data):
-        deviceID=data["deviceID"]
-        result = dbc.select("Devices", rows="*", condition='WHERE DeviceID="' + deviceID +'"')
+        bridgeID=data["bridgeID"]
+        result = dbc.select("Devices", rows="*", condition='WHERE BridgeID="' + bridgeID +'"')
         dictionaryToJson={"type":"devicesResponse","response":result}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
@@ -57,8 +57,6 @@ class Messenger:
         dictionaryToJson={"type":"devicesResponse","response":result}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
-
-
 
     def handleAuthentication(self,data):
         login,password=data["login"],data["password"]
@@ -72,7 +70,7 @@ class Messenger:
         self.send_msg(msg)
 
     def constructMessage(self,data):
-        data["ID"]=self.messageId
+        data["messageID"]=self.messageId
         msg=json.dumps(data)
         return msg
 

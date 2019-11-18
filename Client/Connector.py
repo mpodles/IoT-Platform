@@ -4,6 +4,8 @@ import sys
 import time
 from util import *
 import multiprocessing as mp
+from requests import get
+
 import Client.Messenger as msg
 
 global serverMessenger
@@ -25,22 +27,35 @@ def connectToServer(address='localhost',port=1101):
     #receiver.start()
     #sender.start()
 
-def connectToDevice(device,natStatus):
-    result=serverMessenger.askForConnectionToDevice(device,natStatus)
+def connectToDevice(device,behindNat):
+    global bridgeMessenger
+    global serverMessenger
+    if behindNat:
+        result=serverMessenger.askForConnectionToDevice(device,behindNat)
+    else:
+        global bridgeMessenger
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        myPublicIp=get('https://api.ipify.org').text
+        sock.bind((myPublicIp,1102))
+        result = serverMessenger.askForConnectionToDevice(device, behindNat)
+        print(sock)
+        add = address + ":" + str(port)
+        serverMessenger = msg.Messenger(sock, add)
 
 
 def getBridgesForUser(userID):
     result=serverMessenger.askForBridges(userID)
-    return
+    bridges=result["response"]
+    return bridges
 
 def getDevicesForBridge(bridgeID):
     result=serverMessenger.askForBridgesDevices(bridgeID)
+    devices=result["response"]
+    return  devices
 
 
 def authenticate(login,password):
     result=serverMessenger.sendLoginRequest(login,password)
-    #waitForResult()
-    print (result)
     if result["response"]=="access_granted":
         return int(result["UserID"])
     else:
