@@ -1,6 +1,7 @@
 import json
 import socket
 import time
+import threading as thr
 import multiprocessing as mp
 import struct
 
@@ -11,26 +12,32 @@ global clientMessenger
 def connectToServer(address='localhost',port=1100):
     global serverMessenger
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((address,port))
-    except Exception as e:
-        raise e
-    print(sock)
-    add=address+":"+str(port)
-    serverMessenger = Messenger(sock, add)
+    sock.connect((address,port))
+    seenAs=sock.recv(1024)
+    print(bytes.decode(seenAs))
+    serverMessenger = Messenger(sock, bytes.decode(seenAs))
+    #receiver = mp.Process(target=serverReceiver, args=(sock,))
+    #sender = mp.Process(target=serverSender, args=(sock,))
+    #receiver.start()
+    #sender.start()
+
 
 class Messenger:
-    socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    udpSocket=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    add=""
+    tcpSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    udpSocket=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    seenAs=""
     #result={}
-    receiverProcess=mp.Process
-    senderProcess=mp.Process
+    receiverProcess=thr.Thread
+    senderProcess=thr.Thread
     messageId = 0
-    def __init__(self,conn,add):
+    def __init__(self,conn,seenAs):
         #self.result={"ID":-1}
-        self.socket=conn
-        self.add=add
+        self.tcpSocket=conn
+        self.seenAs=seenAs
+        self.senderThread= thr.Thread(target=self.sender)
+        self.senderThread.start()
+        self.receiverThread = thr.Thread(target=self.receiver)
+        self.receiverThread.start()
         #self.receiverProcess = mp.Process(target=self.receiver, args=())
         #self.senderProcess = mp.Process(target=self.sender, args=())
         #self.receiverProcess.start()
@@ -95,7 +102,7 @@ class Messenger:
         # Helper function to recv n bytes or return None if EOF is hit
         data = bytearray()
         while len(data) < n:
-            packet = self.socket.recv(n - len(data))
+            packet = self.tcpSocket.recv(n - len(data))
             if not packet:
                 return None
             data.extend(packet)
@@ -105,7 +112,7 @@ class Messenger:
         # Prefix each message with a 4-byte length (network byte order)
         self.messageId=self.messageId+1
         msg = struct.pack('>I', len(msg)) + str.encode(msg)
-        self.socket.sendall(msg)
+        self.tcpSocket.sendall(msg)
         print("sent message ",msg)
 
     # def interpretMessage(self, data):
@@ -131,7 +138,20 @@ class Messenger:
     def sender(self):
         print("sender started")
         while True:
-            self.udpSocket.sendall("keepalive".encode(),)
+            self.udpSocket.sendto(("keepalive connected as"+self.seenAs).encode(),('localhost', 1101))
             time.sleep(2)
 
-if __name__ == '__main__':
+    def interpretMessage(self,data):
+        print("received" ,data)
+        parsedData=json.loads(data)
+        msgID= int(parsedData["messageID"])
+        self.messageId= msgID
+        msgType = parsedData["type"]
+        if msgType == "authRequest":
+            self.handleAuthentication(parsedData)
+        elif msgType == "bridgesRequest":
+            self.handleBridgesRequest(parsedData)
+        elif msgType == "devicesRequest":
+            self.handleDevicesRequest(parsedData)
+        elif msgType == "devicesConnectionRequest":
+            self.handleDevicesConnectionRequest(parsedData)

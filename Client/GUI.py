@@ -33,40 +33,58 @@ def makePopup(title,text):
 class LoginScreen(Screen):
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
+        self.isConnected = False
+        Window.size=500,300
+
         self.layout = GridLayout()
         self.layout.cols = 2
-        self.layout.add_widget(Label(text='User Name1'))
-        self.username = TextInput(multiline=False, width=500)
-        self.username.text="mietek"
-        self.layout.add_widget(self.username)
-        self.layout.add_widget(Label(text='password1'))
-        self.password = TextInput(password=True, multiline=False)
-        self.password.text="elo"
-        self.layout.add_widget(self.password)
-        loginButtonObj =Button(text='login1')
-        loginButtonObj.bind(on_press=self.loginButton)
-        self.layout.add_widget(loginButtonObj)
-        connectButtonObj = Button(text='connect to server')
-        connectButtonObj.bind(on_press=self.connectButton)
-        self.layout.add_widget(connectButtonObj)
+
+        self.usernameLabel=Label(text='User Name')
+
+        self.usernameInput = TextInput(multiline=False)
+        self.usernameInput.text="mietek"
+
+        self.passwordLabel = Label(text='Password')
+
+        self.passwordInput = TextInput(password=True, multiline=False)
+        self.passwordInput.text="elo"
+
+        self.loginButton =Button(text='Login')
+        self.loginButton.bind(on_press=self.login)
+
+        self.connectButton = Button(text='connect to server')
+        self.connectButton.bind(on_press=self.connect)
+
+        self.layout.add_widget(self.usernameLabel)
+        self.layout.add_widget(self.usernameInput)
+        self.layout.add_widget(self.passwordLabel)
+        self.layout.add_widget(self.passwordInput)
+        self.layout.add_widget(self.loginButton)
+        self.layout.add_widget(self.connectButton)
         self.add_widget(self.layout)
 
-    def connectButton(self,button):
+    def connect(self,button):
         try:
             conn.connectToServer()
             makePopup("info","Connected")
+            self.isConnected=True
         except Exception as e:
             makePopup("error", str(e))
 
-    def loginButton(self,button):
-        result=conn.authenticate(self.username.text, self.password.text)
-        if result:
-            self.parent.current='screen2'
-            self.parent.screens[1].sessionLogin=self.username.text
-            self.parent.screens[1].sessionPassword = self.password.text
-            self.parent.screens[1].userID = result
+    def login(self,button):
+        if self.isConnected:
+            result=conn.authenticate(self.usernameInput.text, self.passwordInput.text)
+            if result:
+                self.parent.current='screen2'
+                self.parent.screens[1].sessionLogin=self.usernameInput.text
+                self.parent.screens[1].sessionPassword = self.passwordInput.text
+                self.parent.screens[1].userID = result
+                Window.size=1000,800
+            else:
+                self.makePopup("error", "login/password not found")
         else:
-            self.makePopup("error", "login/password not found")
+            makePopup("error","not connected to server")
+
 
 
 class RegularScreen(Screen):

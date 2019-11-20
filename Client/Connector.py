@@ -4,6 +4,7 @@ import sys
 import time
 from util import *
 import multiprocessing as mp
+import threading as thr
 from requests import get
 
 import Client.Messenger as msg
@@ -15,32 +16,31 @@ global bridgeMessenger
 def connectToServer(address='localhost',port=1101):
     global serverMessenger
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((address,port))
-    except Exception as e:
-        raise e
-    print(sock)
-    add=address+":"+str(port)
-    serverMessenger = msg.Messenger(sock, add)
+    sock.connect((address,port))
+    seenAs=sock.recv(1024)
+    print(bytes.decode(seenAs))
+    serverMessenger = msg.Messenger(sock, bytes.decode(seenAs))
     #receiver = mp.Process(target=serverReceiver, args=(sock,))
-    #sender = mp.Process(target=serverSender, args=(sock,))
+    sender = thr.Thread(target=serverMessenger.sender, args=())
     #receiver.start()
-    #sender.start()
+    sender.start()
 
 def connectToDevice(device,behindNat):
     global bridgeMessenger
     global serverMessenger
     if behindNat:
-        result=serverMessenger.askForConnectionToDevice(device,behindNat)
+        bridgeMessenger=msg.Messenger()
+        result=serverMessenger.askForConnectionToDevice(device,behindNat,)
     else:
-        global bridgeMessenger
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        myPublicIp=get('https://api.ipify.org').text
-        sock.bind((myPublicIp,1102))
-        result = serverMessenger.askForConnectionToDevice(device, behindNat)
-        print(sock)
-        add = address + ":" + str(port)
-        serverMessenger = msg.Messenger(sock, add)
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            myPublicIp=get('https://api.ipify.org').text
+            sock.bind((myPublicIp,1102))
+            result = serverMessenger.askForConnectionToDevice(device, behindNat,sock)
+        except Exception as e:
+            print(e)
+        #result = serverMessenger.askForConnectionToDevice(device, behindNat)
+        #serverMessenger = msg.Messenger(sock, add)
 
 
 def getBridgesForUser(userID):

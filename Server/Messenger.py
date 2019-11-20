@@ -5,6 +5,9 @@ import multiprocessing as mp
 import struct
 import Server.DatabaseConnection as dbc
 import Server.UDPServer
+import Server.Messengers as messengers
+
+
 
 class Messenger:
     socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -13,6 +16,14 @@ class Messenger:
     receiverProcess=mp.Process
     #senderProcess=mp.Process
     def __init__(self,conn,add):
+        # if type=="bridge":
+        #     global bridgesMessengers
+        #     bridgesMessengers[add]=self
+        #
+        # elif type =="client":
+        #     global clientsMessengers
+        #     clientsMessengers[add]=self
+        #     print(clientsMessengers)
         self.socket=conn
         self.add=add
         self.receiverProcess = mp.Process(target=self.receiver, args=())
@@ -51,10 +62,18 @@ class Messenger:
         self.send_msg(msg)
 
     def handleDevicesConnectionRequest(self,data):
-        deviceID=data["deviceID"]
+        deviceID,behindNat=data["deviceID"],data["behindNat"]
         result = dbc.select("Devices", rows="*", condition='WHERE DeviceID="' + deviceID +'"')
-
-        dictionaryToJson={"type":"devicesResponse","response":result}
+        if result.__len__() > 0:
+            deviceAddress= result[0][1]
+            deviceName= result[0][2]
+            bridgeID =result[0][3]
+            requestToBridgeDictToJson = {"type":"devicesConnectionRequest","deviceName":str(deviceName),"deviceAddress":str(deviceAddress)}
+            req=bridgesMessengers[result[0][3]].constructMessage(requestToBridgeDictToJson)  # TODO
+            bridgesMessengers[result[0][3]].send_msg(req)
+            #dictionaryToJson = {"type": "devicesConnectionResponse", "response": }
+        else:
+            dictionaryToJson={"type":"devicesConnectionResponse","response":"deviceNotFound"}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
 
@@ -75,11 +94,22 @@ class Messenger:
         return msg
 
     def receiver(self):
-        print("receiver started")
-        while True:
-            data=self.recv_msg()
-            if data is not None:
-                self.interpretMessage(bytearray.decode(data))
+        try:
+            print("receiver started")
+            while True:
+                data=self.recv_msg()
+                if data is not None:
+                    print(self)
+                    print(messengers.clientsMessengers)
+                    self.interpretMessage(bytearray.decode(data))
+        except Exception as e:
+            print(self)
+            print(messengers.clientsMessengers)
+            if self in messengers.clientsMessengers.values():
+                print("found self in clients")
+            #elif self in bridgesMessengers.values():
+                #print("found self in bridges")
+                #del bridgesMessengers
 
     def recv_msg(self):
         # Read message length and unpack it into an integer
