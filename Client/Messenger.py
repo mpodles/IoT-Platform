@@ -13,10 +13,11 @@ class Messenger:
     receiverProcess=mp.Process
     senderProcess=mp.Process
     messageId = 0
-    def __init__(self,conn,seenAs):
+    def __init__(self,tcpSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM),udpSocket=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)):
         #self.result={"ID":-1}
-        self.tcpSocket=conn
-        self.seenAs=seenAs
+        self.tcpSocket=tcpSocket
+        self.udpSocket=udpSocket
+        #self.seenAs=seenAs
         #self.senderThread= thr.Thread(target=self.sender)
         #self.senderThread.start()
         #self.receiverProcess = mp.Process(target=self.receiver, args=())
@@ -30,8 +31,8 @@ class Messenger:
     #         self.access=True
 
 
-    def sendLoginRequest(self,login,password):
-        msg='{"messageID":"'+str(self.messageId)+'","type":"authRequest","login":"'+str(login)+'","password":"'+str(password)+'"}'
+    def sendAuthorizationRequest(self,login,password):
+        msg='{"messageID":"'+str(self.messageId)+'","type":"authorizationRequest","login":"'+str(login)+'","password":"'+str(password)+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
@@ -50,9 +51,12 @@ class Messenger:
         result = self.getResult()
         return result
 
-    def askForConnectionToDevice(self,device,behindNat,socket=""):
-        msg = '{"messageID":"' + str(
-            self.messageId) + '","type":"deviceConnectionRequest","deviceID":"' + str(device) + '","behindNat":"'+str(behindNat)+'"}'
+    def askForConnectionToDevice(self,device,behindNat,socketAddress=""):
+        if behindNat:
+            msg = '{"messageID":"' + str(self.messageId) + '","type":"deviceConnectionRequest","deviceID":"' + str(device) + '","behindNat":"'+str(behindNat)+'"}'
+        else:
+            msg = '{"messageID":"' + str(self.messageId) + '","type":"deviceConnectionRequest","deviceID":"' + str(
+                device) + '","behindNat":"' + str(behindNat) + '","clientAddress":"'+socketAddress+'"}'
         self.send_msg(msg)
         result = self.getResult()
         return result
@@ -108,13 +112,29 @@ class Messenger:
     #     #     pass
 
     def receiver(self):
+        global clientsMessengers
+        global bridgesMessengers
         try:
             print("receiver started")
             while True:
-                data=bytearray.decode(self.recv_msg())
-                self.interpretMessage(data)
+                data=self.recv_msg()
+                if data is not None:
+                    self.interpretMessage(bytearray.decode(data))
         except Exception as e:
             print(e)
+
+    def receive(self):
+        global clientsMessengers
+        global bridgesMessengers
+        try:
+            print("receiver started")
+            while True:
+                data=self.recv_msg()
+                if data is not None:
+                    return bytearray.decode(data)
+        except Exception as e:
+            print(e)
+
 
     def sender(self):
         print("sender started")

@@ -10,3 +10,7 @@ import Bridge.Messenger as msg
 
 if __name__ == '__main__':
     msg.connectToServer()
+    msg.awaitForModules()
+    msg.registerBridge()
+    time.sleep(2)
+    msg.registerBridge()

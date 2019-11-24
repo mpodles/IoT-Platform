@@ -17,6 +17,8 @@ from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.uix.spinner import Spinner
 from multiprocessing import freeze_support
+from kivy.clock import Clock
+from functools import partial
 
 sessionLogin=""
 sessionPassword=""
@@ -73,7 +75,7 @@ class LoginScreen(Screen):
 
     def login(self,button):
         if self.isConnected:
-            result=conn.authenticate(self.usernameInput.text, self.passwordInput.text)
+            result=conn.authorizate(self.usernameInput.text, self.passwordInput.text)
             if result:
                 self.parent.current='screen2'
                 self.parent.screens[1].sessionLogin=self.usernameInput.text
@@ -186,8 +188,9 @@ class RegularScreen(Screen):
         behindNat = False
         if self.natToogle.state =='down':
             behindNat=True
-        conn.connectToDevice(deviceID,behindNat)
-
+        messenger=conn.connectToDevice(deviceID,behindNat)
+        self.parent.screens[2].connectedDevice=deviceID
+        self.parent.screens[2].messenger =messenger
 
 
     # def resize(self,me,x_size,y_size):
@@ -205,6 +208,9 @@ class RegularScreen(Screen):
 class ConnectedScreen(Screen):
     def __init__(self, **kwargs):
         super(ConnectedScreen, self).__init__(**kwargs)
+        self.messenger=None
+        self.connectedDevice=""
+        Clock.schedule_interval(self.getDataFromMessenger, 1)
         self.layout=GridLayout()
         self.layout.rows=2
 
@@ -244,7 +250,12 @@ class ConnectedScreen(Screen):
         self.layout.add_widget(self.menu)
 
         self.add_widget(self.layout)
-        pass
+
+
+    def getDataFromMessenger(self):
+        data=self.messenger.receive()
+        self.textLabel.text += "\n Revceived from "+self.connectedDevice+": " + str(data)
+        self.textField.scroll_to(self.textInput)
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text

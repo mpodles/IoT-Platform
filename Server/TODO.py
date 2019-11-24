@@ -39,13 +39,18 @@ class Messenger:
         self.messageId= msgID
         msgType = parsedData["type"]
         if msgType == "authRequest":
-            self.handleAuthentication(parsedData)
+            self.handleAuthorization(parsedData)
         elif msgType == "bridgesRequest":
             self.handleBridgesRequest(parsedData)
         elif msgType == "devicesRequest":
             self.handleDevicesRequest(parsedData)
         elif msgType == "devicesConnectionRequest":
             self.handleDevicesConnectionRequest(parsedData)
+        elif msgType== "registrationRequest":
+            self.handleBridgesRegistration(parsedData)
+
+    def handleBridgesRegistration(self,data):
+        data
 
     def handleBridgesRequest(self,data):
         userID=data["userID"]
@@ -69,7 +74,7 @@ class Messenger:
             deviceName= result[0][2]
             bridgeID =result[0][3]
             requestToBridgeDictToJson = {"type":"devicesConnectionRequest","deviceName":str(deviceName),"deviceAddress":str(deviceAddress)}
-            req=bridgesMessengers[result[0][3]].constructMessage(requestToBridgeDictToJson)  # TODO
+            req=bridgesMessengers[result[0][1]].constructMessage(requestToBridgeDictToJson)  # TODO
             bridgesMessengers[result[0][3]].send_msg(req)
             #dictionaryToJson = {"type": "devicesConnectionResponse", "response": }
         else:
@@ -77,7 +82,7 @@ class Messenger:
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
 
-    def handleAuthentication(self,data):
+    def handleAuthorization(self,data):
         login,password=data["login"],data["password"]
         result=dbc.select("Users",rows="*",condition='WHERE login="'+login+'" AND password="'+password+'"')
         if  result.__len__()>0:

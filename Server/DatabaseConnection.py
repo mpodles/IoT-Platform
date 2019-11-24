@@ -4,7 +4,7 @@ import mysql.connector
 
 
 try:
-    myDB = mysql.connector.connect(host="192.168.1.12", user="root ",passwd="password",database="IoTPlatform")
+    myDB = mysql.connector.connect(host="localhost", user="root ",passwd="password",database="IoTPlatform")
     mycursor=myDB.cursor()
 except Exception as e:
     print (e)
@@ -14,9 +14,20 @@ def select(table,rows="*",condition=""):
     myresult =mycursor.fetchall()
     return myresult
 
+def insert(table,valueNames,values):
+    mycursor.execute("INSERT INTO " + table + valueNames + " VALUES " + values)
+    myDB.commit()
+    #myresult = mycursor.fetchall()
+
+def update(table,query):
+    mycursor.execute("UPDATE "+ table + " SET "+ query)
+    myDB.commit()
+    #myresult = mycursor.fetchall()
+
+
 if __name__ == '__main__':
-        result=select(table="Users",condition="WHERE Login='abc' AND Password='abc'")
-        print(result[0][0])
+    mycursor.execute('INSERT INTO Bridges (UserID,Address,Name) VALUES (1,"eloadres","elonazwa")')
+    print("done")
 
 
 
