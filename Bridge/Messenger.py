@@ -517,6 +517,7 @@ class OutsideClientMessenger:
                 if data is not None:
                     self.interpretMessage(bytearray.decode(data))
         except Exception as e:
+            global clientMessenger
             print("Deleting self")
             self.stopSender= True
             clientMessenger=None
@@ -527,8 +528,9 @@ class OutsideClientMessenger:
             if self.stopSender ==True:
                 print("exiting sender")
                 return
-            self.udpSocket.sendto(("keepalive").encode(), (str(self.clientAddress[0]),int(self.clientAddress[1])))
-            print("sent keepalive to ", (str(self.clientAddress[0]),int(self.clientAddress[1])))
+            self.udpSocket.sendto(("k!e@e#p$a%l^i&v*e(").encode(), (str(self.clientAddress[0]),int(self.clientAddress[1])))
+            self.udpSocket.sendto(("eldo").encode(),
+                                  (str(self.clientAddress[0]), int(self.clientAddress[1])))
             time.sleep(2)
 
     def interpretMessage(self,data):

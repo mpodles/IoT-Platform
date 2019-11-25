@@ -43,7 +43,7 @@ class BridgeMessenger:
         # Prefix each message with a 4-byte length (network byte order)
         self.messageId = self.messageId + 1
         msg = struct.pack('>I', len(msg)) + str.encode(msg)
-        self.udpSocket.sendallto(msg,self.bridgeAddress)
+        self.udpSocket.sendto(msg,self.bridgeAddress)
         print("sent message ", msg)
 
     def receiver(self):
@@ -58,7 +58,9 @@ class BridgeMessenger:
         except Exception as e:
             print(e)
 
-    def receive(self):
+
+
+    def receive_old(self):
         global clientsMessengers
         global bridgesMessengers
         try:
@@ -67,6 +69,20 @@ class BridgeMessenger:
                 if data is not None:
                     print(data)
                     return bytearray.decode(data)
+        except Exception as e:
+            print(e)
+
+    def receive(self):
+        global clientsMessengers
+        global bridgesMessengers
+        try:
+            while True:
+                data, addr = self.udpSocket.recvfrom(4096)
+                self.bridgeAddress = addr
+                if data is not None:
+                    data=bytes.decode(data)
+                    if data != 'k!e@e#p$a%l^i&v*e(':
+                        return data
         except Exception as e:
             print(e)
 

@@ -205,6 +205,7 @@ class RegularScreen(Screen):
         self.parent.screens[2].connectedDevice=(deviceID,deviceAddress,deviceName,deviceType)
         self.parent.screens[2].messenger =messenger
         self.parent.screens[2].buildButtons()
+        self.parent.screens[2].stopFlag = False
         self.parent.screens[2].receiverThread= thr.Thread(target=self.parent.screens[2].getDataFromMessenger)
         self.parent.screens[2].receiverThread.start()
         self.parent.current="screen3"
@@ -228,6 +229,7 @@ class ConnectedScreen(Screen):
         super(ConnectedScreen, self).__init__(**kwargs)
         self.messenger=None
         self.receiverThread= None
+        self.stopFlag=True
         self.options =None
         self.connectedDevice=""
         self.layout=GridLayout()
@@ -268,10 +270,14 @@ class ConnectedScreen(Screen):
 
 
     def disconnect(self,button):
-        print("disconnect")
+        self.stopFlag=True
+        conn.disconnectFromBridge()
+        self.parent.current="screen2"
 
     def getDataFromMessenger(self):
         while True:
+            if self.stopFlag:
+                return
             data=self.messenger.receive()
             self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
             self.textField.scroll_to(self.textInput)

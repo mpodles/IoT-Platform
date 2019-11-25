@@ -12,8 +12,11 @@ import Server.DatabaseConnection as dbc
 #import Server.Messengers as messengers
 
 processesManager =None
+
 bridgesMessengers =None
+
 clientsMessengers=None
+
 tcpToUdpMap=None
 
 
@@ -331,10 +334,6 @@ class Messenger:
 
 if __name__ == '__main__':
 
-    global processesManager
-    global bridgesMessengers
-    global clientsMessengers
-    global tcpToUdpMap
 
     bridgesMessengers = {}
     clientsMessengers = {}

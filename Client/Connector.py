@@ -9,31 +9,35 @@ from requests import get
 
 import Client.Messenger as msg
 
-global serverMessenger
+serverMessenger=None
 
-global bridgeMessenger
+bridgeMessenger=None
 
-global tcpSocket
+tcpSocket=None
 
-global udpSocket
+udpSocket=None
 
-global seenAs
+seenAs=None
+
+connectedToServer=False
 
 def connectToServer(address='localhost',port=1101):
     global serverMessenger
     global seenAs
     global tcpSocket
     global udpSocket
-    tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    tcpSocket.connect((address,port))
-    udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    seenAs=bytes.decode(tcpSocket.recv(1024))
-    print("I'm seen as tcp: ",seenAs)
-    serverMessenger = msg.ServerMessenger(tcpSocket=tcpSocket)
-    #receiver = mp.Process(target=serverReceiver, args=(sock,))
-    sender = thr.Thread(target=udpTunnel, args=())
-    #receiver.start()
-    sender.start()
+    global connectedToServer
+    if not connectedToServer:
+        tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcpSocket.connect((address,port))
+        udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        seenAs=bytes.decode(tcpSocket.recv(1024))
+        print("I'm seen as tcp: ",seenAs)
+        serverMessenger = msg.ServerMessenger(tcpSocket=tcpSocket)
+        sender = thr.Thread(target=udpTunnel, args=())
+        sender.start()
+        isConnectedToServer=True
+
 
 def connectToDevice(device,behindNat):
     global bridgeMessenger
@@ -59,6 +63,9 @@ def connectToDevice(device,behindNat):
         #result = serverMessenger.askForConnectionToDevice(device, behindNat)
         #serverMessenger = msg.Messenger(sock, add)
 
+def disconnectFromBridge():
+    global bridgeMessenger
+    bridgeMessenger=None
 
 def getBridgesForUser(userID):
     result=serverMessenger.askForBridges(userID)
