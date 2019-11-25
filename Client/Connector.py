@@ -29,7 +29,7 @@ def connectToServer(address='localhost',port=1101):
     udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     seenAs=bytes.decode(tcpSocket.recv(1024))
     print("I'm seen as tcp: ",seenAs)
-    serverMessenger = msg.Messenger(tcpSocket=tcpSocket)
+    serverMessenger = msg.ServerMessenger(tcpSocket=tcpSocket)
     #receiver = mp.Process(target=serverReceiver, args=(sock,))
     sender = thr.Thread(target=udpTunnel, args=())
     #receiver.start()
@@ -38,18 +38,24 @@ def connectToServer(address='localhost',port=1101):
 def connectToDevice(device,behindNat):
     global bridgeMessenger
     global serverMessenger
+    global udpSocket
+    options=None
     if behindNat:
-        bridgeMessenger=msg.Messenger()
         result=serverMessenger.askForConnectionToDevice(device,behindNat)
+        bridgeAdd=result["bridgeAddress"]
+        options = result["options"]
+        bridgeMessenger = msg.BridgeMessenger(udpSocket=udpSocket,bridgeAddress=(bridgeAdd[0],bridgeAdd[1]))
+        print(bridgeAdd)
+        print(options)
     else:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            myPublicIp=get('https://api.ipify.org').text
-            sock.bind((myPublicIp,1102))
-            result = serverMessenger.askForConnectionToDevice(device, behindNat,sock.getsockname())
-        except Exception as e:
-            print(e)
-    return bridgeMessenger
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        myPublicIp=get('https://api.ipify.org').text
+        sock.bind((myPublicIp,1102))
+        result = serverMessenger.askForConnectionToDevice(device, behindNat,sock.getsockname())
+        options=result["options"]
+        bridgeMessenger=msg.BridgeMessenger(udpSocket=sock)
+
+    return bridgeMessenger,options
         #result = serverMessenger.askForConnectionToDevice(device, behindNat)
         #serverMessenger = msg.Messenger(sock, add)
 

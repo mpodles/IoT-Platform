@@ -17,6 +17,7 @@ from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.uix.spinner import Spinner
 from multiprocessing import freeze_support
+import threading as thr
 from kivy.clock import Clock
 from functools import partial
 
@@ -126,6 +127,7 @@ class RegularScreen(Screen):
 
 
         self.natToogle = ToggleButton(text="I'm behind\n NAT")
+        self.natToogle.state ='down'
         self.natToogle.size_hint=None,None
         self.natToogle.size = (Window.width/5,Window.height*1/10)
 
@@ -184,13 +186,29 @@ class RegularScreen(Screen):
             if not isinstance(child, Button):
                 infoLabel=child
         print(infoLabel.text)
-        deviceID=infoLabel.text.split("   Address: ")[0][4:]
+        tmp=infoLabel.text.split("   Address: ")
+        deviceID=tmp[0][4:]
+        tmp=tmp[1].split("\n Name: ")
+        deviceAddress=tmp[0]
+        tmp = tmp[1].split("\n Type: ")
+        deviceName=tmp[0]
+        deviceType=tmp[1]
         behindNat = False
         if self.natToogle.state =='down':
             behindNat=True
-        messenger=conn.connectToDevice(deviceID,behindNat)
-        self.parent.screens[2].connectedDevice=deviceID
+        messenger,options=None,None
+        try:
+            messenger,options=conn.connectToDevice(deviceID,behindNat)
+        except Exception as e:
+            makePopup("Error",str(e))
+        self.parent.screens[2].options=options
+        self.parent.screens[2].connectedDevice=(deviceID,deviceAddress,deviceName,deviceType)
         self.parent.screens[2].messenger =messenger
+        self.parent.screens[2].buildButtons()
+        self.parent.screens[2].receiverThread= thr.Thread(target=self.parent.screens[2].getDataFromMessenger)
+        self.parent.screens[2].receiverThread.start()
+        self.parent.current="screen3"
+        #Clock.schedule_interval(self.parent.screens[2].getDataFromMessenger, 1)
 
 
     # def resize(self,me,x_size,y_size):
@@ -209,13 +227,19 @@ class ConnectedScreen(Screen):
     def __init__(self, **kwargs):
         super(ConnectedScreen, self).__init__(**kwargs)
         self.messenger=None
+        self.receiverThread= None
+        self.options =None
         self.connectedDevice=""
-        Clock.schedule_interval(self.getDataFromMessenger, 1)
         self.layout=GridLayout()
-        self.layout.rows=2
+        self.layout.rows=3
+
+        self.disconnectButton=Button(text="disconnect")
+        self.disconnectButton.size=Window.width,Window.height/20
+        self.disconnectButton.size_hint=1,None
+        self.disconnectButton.bind(on_press=self.disconnect)
 
         self.textField=ScrollView()
-        self.textField.size=Window.width,Window.height*8/10
+        self.textField.size=Window.width,Window.height*7/10
         self.textField.size_hint=1,None
 
         self.textLabel=Label(text=""*100,valign='bottom')
@@ -231,36 +255,47 @@ class ConnectedScreen(Screen):
         self.buttons=GridLayout()
         self.buttons.rows=1
 
-        self.sendButton=Button(text="send")
-        self.sendButton.bind(on_press=self.sendMessage)
-
-        self.otherButton1=Button(text="other1")
-        self.otherButton2=Button(text="other2")
-
-        self.buttons.add_widget(self.sendButton)
-        self.buttons.add_widget(self.otherButton1)
-        self.buttons.add_widget(self.otherButton2)
-
         self.menu.add_widget(self.buttons)
         self.menu.add_widget(self.textInput)
 
         self.textField.add_widget(self.textLabel)
 
+        self.layout.add_widget(self.disconnectButton)
         self.layout.add_widget(self.textField)
         self.layout.add_widget(self.menu)
 
         self.add_widget(self.layout)
 
 
+    def disconnect(self,button):
+        print("disconnect")
+
     def getDataFromMessenger(self):
-        data=self.messenger.receive()
-        self.textLabel.text += "\n Revceived from "+self.connectedDevice+": " + str(data)
-        self.textField.scroll_to(self.textInput)
+        while True:
+            data=self.messenger.receive()
+            self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
+            self.textField.scroll_to(self.textInput)
+
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text
         self.textInput.text=""
+        self.messenger.send_msg(self.textInput.text)
         self.textField.scroll_to(self.textInput)
+
+    def buildButtons(self):
+        self.buttons.clear_widgets()
+        self.sendButton = Button(text="send")
+        self.sendButton.bind(on_press=self.sendMessage)
+        self.buttons.add_widget(self.sendButton)
+        for option in self.options:
+            customButton = Button(text=str(option))
+            customButton.bind(on_press=self.customButton)
+            self.buttons.add_widget(customButton)
+
+    def customButton(self,button):
+        print(button.text)
+
 
 class IoTPlatformClientApp(App):
     def build(self):
@@ -291,7 +326,8 @@ class IoTPlatformClientApp(App):
                 else:
                     child.size = Window.width *3/ 5, 90
 
-        self.connectedScreen.textField.size=Window.width,Window.height*8/10
+        self.connectedScreen.disconnectButton.size=Window.width,Window.height/20
+        self.connectedScreen.textField.size=Window.width,Window.height*7/10
         self.connectedScreen.textLabel.text_size=Window.width,Window.height
         self.connectedScreen.textLabel.size = Window.width, self.connectedScreen.textLabel.text_size[1]
 

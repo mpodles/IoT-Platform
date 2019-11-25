@@ -13,8 +13,7 @@ data= 30
 
 msg.connectToBridge()
 msg.registerDevices(devices)
-time.sleep(300)
-#msg.registerOptions(options)
+msg.registerOptions(options)
 #msg.sendDataFromDevice(device,data)
 #while True:
 #    data=msg.getData()

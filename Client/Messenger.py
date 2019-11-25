@@ -5,7 +5,81 @@ import multiprocessing as mp
 import threading as thr
 import struct
 
-class Messenger:
+class BridgeMessenger:
+    udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    bridgeAddress=None
+    receiverProcess = mp.Process
+    messageId = 0
+
+    def __init__(self,udpSocket,bridgeAddress=""):
+        self.udpSocket = udpSocket
+        self.bridgeAddress=bridgeAddress
+        #self.receiverThread = thr.Thread(target=self.receiver, args=())
+        #self.receiverThread.start()
+
+
+    def recv_msg(self):
+        # Read message length and unpack it into an integer
+        raw_msglen = self.recvall(4)
+        if not raw_msglen:
+            return None
+        msglen = struct.unpack('>I', raw_msglen)[0]
+        # Read the message data
+        return self.recvall(msglen)
+
+    def recvall(self, n):
+        # Helper function to recv n bytes or return None if EOF is hit
+        data = bytearray()
+        while len(data) < n:
+            packet,addr = self.udpSocket.recvfrom(n - len(data))
+            print(packet,"  ",addr)
+            self.bridgeAddress=addr
+            if not packet:
+                return None
+            data.extend(packet)
+        return data
+
+    def send_msg(self, msg):
+        # Prefix each message with a 4-byte length (network byte order)
+        self.messageId = self.messageId + 1
+        msg = struct.pack('>I', len(msg)) + str.encode(msg)
+        self.udpSocket.sendallto(msg,self.bridgeAddress)
+        print("sent message ", msg)
+
+    def receiver(self):
+        global clientsMessengers
+        global bridgesMessengers
+        try:
+            print("receiver started")
+            while True:
+                data = self.recv_msg()
+                if data is not None:
+                    self.interpretMessage(bytearray.decode(data))
+        except Exception as e:
+            print(e)
+
+    def receive(self):
+        global clientsMessengers
+        global bridgesMessengers
+        try:
+            while True:
+                data = self.recv_msg()
+                if data is not None:
+                    print(data)
+                    return bytearray.decode(data)
+        except Exception as e:
+            print(e)
+
+    def keepaliveSender(self):
+        while True:
+            self.udpSocket.sendto(("keepalive").encode(), self.bridgeAddress)
+            time.sleep(2)
+
+
+
+
+
+class ServerMessenger:
     tcpSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     udpSocket=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     seenAs=""
@@ -143,5 +217,5 @@ class Messenger:
             time.sleep(2)
 
 if __name__ == '__main__':
-    msg=Messenger(2,3)
+    msg=ServerMessenger(2,3)
     msg.sender()

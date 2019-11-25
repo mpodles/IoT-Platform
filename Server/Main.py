@@ -11,10 +11,10 @@ from util import *
 import Server.DatabaseConnection as dbc
 #import Server.Messengers as messengers
 
-global processesManager
-global bridgesMessengers
-global clientsMessengers
-global tcpToUdpMap
+processesManager =None
+bridgesMessengers =None
+clientsMessengers=None
+tcpToUdpMap=None
 
 
 # def clientReceiver(conn,add):
@@ -124,6 +124,56 @@ class Messenger:
             self.handleDevicesConnectionRequest(parsedData)
         elif msgType == "registrationRequest":
             self.handleBridgesRegistration(parsedData)
+        elif msgType == "devicesRegistrationRequest":
+            self.handleDevicesRegistration(parsedData)
+        elif msgType == "optionsRegistrationRequest":
+            self.handleOptionsRegistration(parsedData)
+
+    def handleDevicesRegistration(self,data):
+        bridgeName = data["bridgeName"]
+        devices= data["devices"]
+        devices=devices.replace("'",'"')
+        print(devices)
+        devices = json.loads(devices)
+        for device in devices:
+            print(device)
+        check = dbc.select("Bridges", rows="*",
+                           condition='WHERE Name="' + str(bridgeName) + '"')
+        if check.__len__() > 0:
+            bridgeId = check[0][0]
+            for device in devices:
+                deviceName=device["name"]
+                deviceAddress=device["address"]
+                deviceType=device["type"]
+                check2 = dbc.select("Devices", rows="*",
+                           condition='WHERE Address="' + str(deviceAddress) + '" AND '
+                            'BridgeID="'+str(bridgeId)+'" ')
+                if check2.__len__() > 0:
+                    print("device exists")
+                    query = 'Name= "' + deviceName + '" WHERE BridgeID="' + str(bridgeId) +'" AND Address="' + str(deviceAddress)+'"'
+                    dbc.update("Devices", query)
+                else:
+                    query = '( ' + str(bridgeId) + ',"' + str(deviceAddress) + '","' + str(deviceType) + '","'+ str(deviceName) + '")'
+                    dbc.insert("Devices", "(BridgeID,Address,Type,Name)", query)
+        else:
+            print("No such bridge found")
+
+
+    def handleOptionsRegistration(self,data):
+        options=data["options"]
+        options=options.replace("'",'"')
+        options=json.loads(options)
+        for option in options:
+            type = option["type"]
+            optionsList= option["options"]
+            for optionInstance in optionsList:
+                check = dbc.select("Options", rows="*",
+                           condition='WHERE Type="' + str(type) + '" AND DeviceOption="' + str(optionInstance) + '"')
+                if check.__len__() > 0:
+                    print("Option exists ")
+                else:
+                    query = '( "' + str(type) + '","' + optionInstance + '")'
+                    dbc.insert("Options", "(Type,DeviceOption)", query)
 
     def handleBridgesRegistration(self, data):
         bridgeName,bridgeUser=data["bridgeName"],data["bridgeUser"]
@@ -134,7 +184,7 @@ class Messenger:
             if check.__len__()>0:
                 bridgeId=check[0][0]
                 print("Updating bridge ",bridgeId)
-                query= 'Address= "'+ self.peerAdd+'" WHERE BridgeID='+str(bridgeId)
+                query= 'Address= "'+ str(self.peerAdd)+'" WHERE BridgeID='+str(bridgeId)
                 dbc.update("Bridges",query)
                 dictionaryToJson = {"type": "registrationResponse", "response": "bridgeUpdated"}
             else:
@@ -171,19 +221,29 @@ class Messenger:
         if result.__len__() > 0:
             deviceAddress= result[0][1]
             deviceName= result[0][2]
+            deviceType= result[0][3]
+            clientAddressKey = (str(self.peerAdd.split(":")[0]), int(self.peerAdd.split(":")[1]))
+            options= self.getOptionsByType(deviceType)
             bridgeID =result[0][4]
-            findBridge=dbc.select("Bridges",rows="Address",condition='WHERE BridgeID="'+bridgeID+'"')
+            findBridge=dbc.select("Bridges",rows="Address",condition='WHERE BridgeID="'+str(bridgeID)+'"')
             bridgeAddress=findBridge[0][0]
+            bridgeAddressKey = (str(bridgeAddress.split(":")[0]), int(bridgeAddress.split(":")[1]))
             requestToBridgeDictToJson = {"type":"deviceConnectionRequest","deviceName":str(deviceName),"deviceAddress":str(deviceAddress)}
-            dictionaryToJson = {"type": "devicesConnectionResponse", "response": "sentAddressToBridge"}
+            dictionaryToJson = {"type": "devicesConnectionResponse", "response": "sentAddressToBridge", "options":options}
             if behindNat:
-                requestToBridgeDictToJson["clientAddress"] = tcpToUdpMap[self.peerAdd]
-                bridgesUDP=tcpToUdpMap[bridgeAddress]
-                dictionaryToJson["bridgeAdd"]=bridgesUDP
+                if clientAddressKey in tcpToUdpMap: #check to be sure, but it should always be true
+                    requestToBridgeDictToJson["clientAddress"] = tcpToUdpMap[clientAddressKey]
+                if bridgeAddressKey in tcpToUdpMap: #check to be sure, but it should always be true
+                    bridgesUDP=tcpToUdpMap[bridgeAddressKey]
+                    dictionaryToJson["bridgeAddress"]=bridgesUDP
+                    requestToBridgeDictToJson["behindNat"] = True
             else:
                 requestToBridgeDictToJson["clientAddress"] = data["clientAddress"]
-            req=bridgesMessengers[bridgeAddress].constructMessage(requestToBridgeDictToJson)
-            bridgesMessengers[bridgeAddress].send_msg(req)
+                requestToBridgeDictToJson["behindNat"] = False
+
+            currentBridgeMessenger=bridgesMessengers[bridgeAddressKey]
+            req=currentBridgeMessenger.constructMessage(requestToBridgeDictToJson)
+            currentBridgeMessenger.send_msg(req)
             #dictionaryToJson = {"type": "devicesConnectionResponse", "response": }
         else:
             dictionaryToJson={"type":"devicesConnectionResponse","response":"deviceNotFound"}
@@ -200,6 +260,14 @@ class Messenger:
             dictionaryToJson = {"type": "authorizationResponse", "response": "access_denied","UserID":"0"}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
+
+
+    def getOptionsByType(self,type):
+        result= dbc.select("Options",rows="*",condition='WHERE Type="'+type+'"')
+        options=[]
+        for option in result:
+            options.append(option[1])
+        return options
 
     def constructMessage(self,data):
         data["messageID"]=self.messageId

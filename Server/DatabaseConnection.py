@@ -4,7 +4,7 @@ import mysql.connector
 
 
 try:
-    myDB = mysql.connector.connect(host="localhost", user="root ",passwd="password",database="IoTPlatform")
+    myDB = mysql.connector.connect(host="192.168.1.12", user="root ",passwd="password",database="IoTPlatform")
     mycursor=myDB.cursor()
 except Exception as e:
     print (e)
