@@ -97,6 +97,7 @@ class BridgeToModuleMessenger:
     receiverThread=thr.Thread
     messageId = 0
     add=""
+    stopReceiver=False
     def __init__(self,tcpSocket,add):
         self.add=add
         self.tcpSocket=tcpSocket
@@ -105,7 +106,7 @@ class BridgeToModuleMessenger:
 
 
     def interpretMessage(self,data):
-        print("received" ,data)
+        print("bridge to module messenger received" ,data)
         parsedData=json.loads(data)
         msgID= int(parsedData["messageID"])
         self.messageId= msgID
@@ -118,12 +119,15 @@ class BridgeToModuleMessenger:
             self.handleDataFromDevices(parsedData)
 
 
+
     def handleDataFromDevices(self,data):
         global clientMessenger
-        payload= data["data"]
-        deviceName=data["deviceName"]
-        deviceAddress=data["deviceAddress"]
-        clientMessenger.sendDataFromDevice(deviceName,deviceAddress,payload)
+        print("client messenger is", clientMessenger)
+        if clientMessenger is not None:
+            payload= data["data"]
+            deviceName=data["deviceName"]
+            deviceAddress=data["deviceAddress"]
+            clientMessenger.sendDataFromDevice(deviceName,deviceAddress,payload)
 
 
     def handleDevicesFromModules(self,data):
@@ -139,9 +143,7 @@ class BridgeToModuleMessenger:
 
 
     def sendDataToDevice(self,device,data):
-        print(device)
         device=tuple(device)
-        print(device)
         msg = '{"messageID":"' + str(
             self.messageId) + '","type":"dataFromDevice"' \
                               ',"deviceName":"' + device[0] + '","deviceAddress":"' + device[1] + '","payload":"' + data + '"}'
@@ -151,18 +153,6 @@ class BridgeToModuleMessenger:
         global serverMessenger
         options =data["options"]
         serverMessenger.sendOptionRegistrationRequest(options)
-
-
-    def getResult(self):
-        try:
-            print("gettingResult")
-            data=bytearray.decode(self.recv_msg())
-            print("result is",data)
-            dictData=json.loads(data)
-            return dictData
-                # self.interpretMessage(data)
-        except Exception as e:
-            print(e)
 
 
     def recv_msg(self):
@@ -206,13 +196,22 @@ class BridgeToModuleMessenger:
         try:
             print("receiver started")
             while True:
+                if self.stopReceiver:
+                    return
                 try:
                     data=self.recv_msg()
                     if data is not None:
                         self.interpretMessage(bytearray.decode(data))
                 except Exception as e:
                     print(e)
-                    if clientMessenger is not None and clientMessenger.current is self:
+                    global devicesInModule
+                    global serverMessenger
+                    devicesToDelete = [key for key, val in devicesInModule.items() if val == (self.add)]
+                    devicesInModule={key: val for key, val in devicesInModule.items() if val != (self.add)}
+                    serverMessenger.sendDevicesDeletionRequest(devicesToDelete)
+                    self.stopReceiver=True
+                    print("clientmessenger is ",clientMessenger)
+                    if clientMessenger is not None and clientMessenger.currentModule is self:
                         print("Module was being used for client")
                         clientMessenger.moduleDisconnected=True
                     if self in messengersToModules.values():
@@ -373,19 +372,25 @@ class OutsideServerMessenger:
             self.messageId) + '","type":"devicesRegistrationRequest","bridgeName":"' + setup.bridgeName + '","devices":"' + str(devices) + '"}'
         self.send_msg(msg)
 
+    def sendDevicesDeletionRequest(self,devices):
+        msg = '{"messageID":"' + str(
+            self.messageId) + '","type":"devicesDeletionRequest","bridgeName":"' + setup.bridgeName + '","devices":"' + str(
+            devices) + '"}'
+        self.send_msg(msg)
+
     def sendOptionRegistrationRequest(self,options):
         msg = '{"messageID":"' + str(
             self.messageId) + '","type":"optionsRegistrationRequest","options":"' + str(options) + '"}'
         self.send_msg(msg)
 
     def handleDevicesConnectionRequest(self,data):
-        global clientMessenger
         global udpSocket
         global messengersToModules
-        if clientMessenger is not None:
-            print("current clientMsg ",clientMessenger)
-        else:
-            print("current clientMsg is None")
+        global clientMessenger
+        # if clientMessenger is not None:
+        #     print("current clientMsg ",clientMessenger)
+        # else:
+        #     print("current clientMsg is None")
         deviceName=data["deviceName"]
         deviceAddress=data["deviceAddress"]
         clientAddress=data["clientAddress"]
@@ -396,9 +401,11 @@ class OutsideServerMessenger:
         print(clientAddress)
         if clientBehindNat:
             clientMessenger= OutsideClientMessenger(udpSocket=udpSocket,module=currentModule,address=clientAddress,device=(deviceName,deviceAddress))
+            print("clientmessenger is ", clientMessenger)
         else:
             newUdpSocket=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
             clientMessenger = OutsideClientMessenger(udpSocket=newUdpSocket,module=currentModule,address=clientAddress,device=(deviceName,deviceAddress))
+            print("clientmessenger is ",clientMessenger)
 
     def constructMessage(self,data):
         data["messageID"]=self.messageId
@@ -490,7 +497,7 @@ class OutsideClientMessenger:
         self.device=device
         self.receiverThread = thr.Thread(target=self.receiver, args=())
         self.receiverThread.start()
-        self.senderThread = thr.Thread(target=self.keepaliveSender())
+        self.senderThread = thr.Thread(target=self.keepaliveSender)
         self.senderThread.start()
         self.moduleCheckerThread=thr.Thread(target=self.moduleChecker)
         self.moduleCheckerThread.start()
@@ -500,7 +507,7 @@ class OutsideClientMessenger:
         msg = '{"messageID":"' + str(
             self.messageId) + '","type":"dataFromDevice"' \
         ',"deviceName":"' + deviceName + '","deviceAddress":"' +deviceAddress + '","payload":"'+data+'"}'
-        self.send_msg(msg)
+        self.send_udp_msg(msg)
 
     def constructMessage(self,data):
         data["messageID"]=self.messageId
@@ -528,19 +535,19 @@ class OutsideClientMessenger:
         return data
 
 
-    def send_msg(self,msg):
-        # Prefix each message with a 4-byte length (network byte order)
-        self.messageId=self.messageId+1
-        msg = struct.pack('>I', len(msg)) + str.encode(msg)
-        self.udpSocket.sendto(msg,self.clientAddress)
-        print("sent message ",msg)
+    # def send_msg(self,msg):
+    #     # Prefix each message with a 4-byte length (network byte order)
+    #     self.messageId=self.messageId+1
+    #     msg = struct.pack('>I', len(msg)) + str.encode(msg)
+    #     self.udpSocket.sendto(msg,self.clientAddress)
+    #     print("sent message ",msg)
 
     def send_udp_msg(self,msg):
-        self.udpSocket.sendto((msg.encode(), (str(self.clientAddress[0]), int(self.clientAddress[1]))))
+        self.udpSocket.sendto(msg.encode(), (str(self.clientAddress[0]), int(self.clientAddress[1])))
         print("sent message ",msg)
 
     def receiver(self):
-        global clientMessenger
+        #global clientMessenger TODO: check if needed
         try:
             print("receiver started")
             while True:
@@ -555,9 +562,7 @@ class OutsideClientMessenger:
             if self.stopSender:
                 print("exiting sender")
                 return
-            self.udpSocket.sendto(("k!e@e#p$a%l^i&v*e(").encode(), (str(self.clientAddress[0]),int(self.clientAddress[1])))
-            self.udpSocket.sendto(("eldo").encode(),
-                                  (str(self.clientAddress[0]), int(self.clientAddress[1])))
+            self.send_udp_msg("k!e@e#p$a%l^i&v*e(")
             time.sleep(2)
 
     def moduleChecker(self):
@@ -566,6 +571,8 @@ class OutsideClientMessenger:
                 self.stopSender=True
                 self.send_udp_msg("ERROR: Module disconnected")
                 print("module disconnected")
+                return
+
 
 
 

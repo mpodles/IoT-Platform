@@ -203,6 +203,7 @@ class RegularScreen(Screen):
             messenger,options=conn.connectToDevice(deviceID,behindNat)
         except Exception as e:
             makePopup("Error",str(e))
+            return
         self.parent.screens[2].options=options
         self.parent.screens[2].connectedDevice=(deviceID,deviceAddress,deviceName,deviceType)
         self.parent.screens[2].messenger =messenger
@@ -294,6 +295,7 @@ class ConnectedScreen(Screen):
             return None
         elif data=="ERROR: Module disconnected":
             self.disconnect("Module disconnected")
+            makePopup("Error","Module with device disconnected")
             return None
         else:
             return data

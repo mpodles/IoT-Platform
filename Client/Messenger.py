@@ -69,7 +69,6 @@ class BridgeMessenger:
                 print("exiting sender")
                 return
             self.send_udp_msg("k!e@e#p$a%l^i&v*e(")
-            self.send_udp_msg("eldo")
             time.sleep(2)
 
     def receive_old(self):

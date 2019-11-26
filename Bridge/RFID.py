@@ -15,12 +15,14 @@ data= 30
 def on_message(data):
     print (data)
 msg.connectToBridge()
-#msg.registerDevices(devices)
-#msg.registerOptions(options)
-msg.bindDevice(device=device,on_message=on_message,options=option)
+msg.registerDevices(devices)
+msg.registerOptions(options)
+#msg.bindDevice(device=device,on_message=on_message,options=option)
+i=0
 while True:
-    time.sleep(10)
-    #msg.sendDataFromDevice(device,data)
+    time.sleep(3)
+    msg.sendDataFromDevice(device,data+i)
+    i+=15
 #while True:
 #    data=msg.getData()
 #    print()

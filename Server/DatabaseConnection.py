@@ -10,7 +10,7 @@ except Exception as e:
     print (e)
 
 def select(table,rows="*",condition=""):
-    mycursor.execute("SELECT "+rows+" FROM "+table+" "+condition)
+    mycursor.execute("SELECT "+rows+" FROM "+table+" WHERE "+condition)
     myresult =mycursor.fetchall()
     return myresult
 
@@ -23,6 +23,10 @@ def update(table,query):
     mycursor.execute("UPDATE "+ table + " SET "+ query)
     myDB.commit()
     #myresult = mycursor.fetchall()
+
+def delete(table,condition):
+    mycursor.execute("DELETE FROM "+table+" WHERE "+condition)
+    myDB.commit()
 
 
 if __name__ == '__main__':

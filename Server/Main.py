@@ -61,7 +61,7 @@ def listenForBridges():
         try:
             bridgesMessengers[add]=newBridgeMessenger
         except Exception as e:
-            print (e)
+            print ("exception adding client messenger to list",e)
         print(bridgesMessengers)
 
 def listenForClients():
@@ -76,7 +76,7 @@ def listenForClients():
         try:
             clientsMessengers[add]=newClientMessenger
         except Exception as e:
-            print (e)
+            print ("exception adding client messenger to list",e)
         print(clientsMessengers)
 
 def sendNotification():
@@ -131,17 +131,44 @@ class Messenger:
             self.handleDevicesRegistration(parsedData)
         elif msgType == "optionsRegistrationRequest":
             self.handleOptionsRegistration(parsedData)
+        elif msgType == "devicesDeletionRequest":
+            self.handleDevicesDeletion(parsedData)
+
+    def handleDevicesDeletion(self,data):
+        bridgeName = data["bridgeName"]
+        devices = data["devices"]
+
+        devices = devices.replace("'", '"')
+        devices = devices.replace("(", '[')
+        devices = devices.replace(")", ']')
+        devices = json.loads(devices)
+        check = dbc.select("Bridges", rows="*",
+                           condition='Name="' + str(bridgeName) + '"')
+        if check.__len__() > 0:
+            bridgeId = check[0][0]
+            for device in devices:
+                deviceName=device[0]
+                deviceAddress=device[1]
+                check2 = dbc.select("Devices", rows="*",
+                           condition='Address="' + str(deviceAddress) + '" AND '
+                            'BridgeID="'+str(bridgeId)+'" ')
+                if check2.__len__() > 0:
+                    print("device exists and trying to delete")
+                    condition = 'Name= "' + deviceName + '" AND BridgeID="' + str(bridgeId) +'" AND Address="' + str(deviceAddress)+'"'
+                    dbc.delete("Devices", condition)
+                else:
+                    print("device to delete not found")
+        else:
+            print("No such bridge found")
+
 
     def handleDevicesRegistration(self,data):
         bridgeName = data["bridgeName"]
         devices= data["devices"]
         devices=devices.replace("'",'"')
-        print(devices)
         devices = json.loads(devices)
-        for device in devices:
-            print(device)
         check = dbc.select("Bridges", rows="*",
-                           condition='WHERE Name="' + str(bridgeName) + '"')
+                           condition='Name="' + str(bridgeName) + '"')
         if check.__len__() > 0:
             bridgeId = check[0][0]
             for device in devices:
@@ -149,7 +176,7 @@ class Messenger:
                 deviceAddress=device["address"]
                 deviceType=device["type"]
                 check2 = dbc.select("Devices", rows="*",
-                           condition='WHERE Address="' + str(deviceAddress) + '" AND '
+                           condition='Address="' + str(deviceAddress) + '" AND '
                             'BridgeID="'+str(bridgeId)+'" ')
                 if check2.__len__() > 0:
                     print("device exists")
@@ -171,7 +198,7 @@ class Messenger:
             optionsList= option["options"]
             for optionInstance in optionsList:
                 check = dbc.select("Options", rows="*",
-                           condition='WHERE Type="' + str(type) + '" AND DeviceOption="' + str(optionInstance) + '"')
+                           condition='Type="' + str(type) + '" AND DeviceOption="' + str(optionInstance) + '"')
                 if check.__len__() > 0:
                     print("Option exists ")
                 else:
@@ -180,10 +207,10 @@ class Messenger:
 
     def handleBridgesRegistration(self, data):
         bridgeName,bridgeUser=data["bridgeName"],data["bridgeUser"]
-        userCheck=dbc.select("Users", rows="*", condition='WHERE Login="' + bridgeUser +'"')
+        userCheck=dbc.select("Users", rows="*", condition='Login="' + bridgeUser +'"')
         if userCheck.__len__()>0:
             userId=userCheck[0][0]
-            check=dbc.select("Bridges", rows="*", condition='WHERE Name="' + str(bridgeName) +'" AND UserID="'+str(userId)+'"')
+            check=dbc.select("Bridges", rows="*", condition='Name="' + str(bridgeName) +'" AND UserID="'+str(userId)+'"')
             if check.__len__()>0:
                 bridgeId=check[0][0]
                 print("Updating bridge ",bridgeId)
@@ -204,14 +231,14 @@ class Messenger:
 
     def handleBridgesRequest(self,data):
         userID=data["userID"]
-        result = dbc.select("Bridges", rows="*", condition='WHERE UserID="' + userID +'"')
+        result = dbc.select("Bridges", rows="*", condition='UserID="' + userID +'"')
         dictionaryToJson={"type":"bridgesResponse","response":result}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
 
     def handleDevicesRequest(self,data):
         bridgeID=data["bridgeID"]
-        result = dbc.select("Devices", rows="*", condition='WHERE BridgeID="' + bridgeID +'"')
+        result = dbc.select("Devices", rows="*", condition='BridgeID="' + bridgeID +'"')
         dictionaryToJson={"type":"devicesResponse","response":result}
         msg=self.constructMessage(dictionaryToJson)
         self.send_msg(msg)
@@ -220,7 +247,7 @@ class Messenger:
         print(bridgesMessengers)
         print(clientsMessengers)
         deviceID,behindNat=data["deviceID"],bool(data["behindNat"])
-        result = dbc.select("Devices", rows="*", condition='WHERE DeviceID="' + deviceID +'"')
+        result = dbc.select("Devices", rows="*", condition='WDeviceID="' + deviceID +'"')
         if result.__len__() > 0:
             deviceAddress= result[0][1]
             deviceName= result[0][2]
@@ -228,18 +255,24 @@ class Messenger:
             clientAddressKey = (str(self.peerAdd.split(":")[0]), int(self.peerAdd.split(":")[1]))
             options= self.getOptionsByType(deviceType)
             bridgeID =result[0][4]
-            findBridge=dbc.select("Bridges",rows="Address",condition='WHERE BridgeID="'+str(bridgeID)+'"')
+            findBridge=dbc.select("Bridges",rows="Address",condition='BridgeID="'+str(bridgeID)+'"')
             bridgeAddress=findBridge[0][0]
             bridgeAddressKey = (str(bridgeAddress.split(":")[0]), int(bridgeAddress.split(":")[1]))
             requestToBridgeDictToJson = {"type":"deviceConnectionRequest","deviceName":str(deviceName),"deviceAddress":str(deviceAddress)}
             dictionaryToJson = {"type": "devicesConnectionResponse", "response": "sentAddressToBridge", "options":options}
             if behindNat:
-                if clientAddressKey in tcpToUdpMap: #check to be sure, but it should always be true
+                print (tcpToUdpMap)
+                try:
                     requestToBridgeDictToJson["clientAddress"] = tcpToUdpMap[clientAddressKey]
-                if bridgeAddressKey in tcpToUdpMap: #check to be sure, but it should always be true
                     bridgesUDP=tcpToUdpMap[bridgeAddressKey]
-                    dictionaryToJson["bridgeAddress"]=bridgesUDP
-                    requestToBridgeDictToJson["behindNat"] = True
+                except Exception as e:
+                    print("tcpToUdp exception:",e)
+                    dictionaryToJson = {"type": "devicesConnectionResponse", "response": "UDPmappingNotFound"}
+                    msg = self.constructMessage(dictionaryToJson)
+                    self.send_msg(msg)
+                    return
+                dictionaryToJson["bridgeAddress"]=bridgesUDP
+                requestToBridgeDictToJson["behindNat"] = True
             else:
                 requestToBridgeDictToJson["clientAddress"] = data["clientAddress"]
                 requestToBridgeDictToJson["behindNat"] = False
@@ -255,7 +288,7 @@ class Messenger:
 
     def handleAuthentication(self,data):
         login,password=data["login"],data["password"]
-        result=dbc.select("Users",rows="*",condition='WHERE login="'+login+'" AND password="'+password+'"')
+        result=dbc.select("Users",rows="*",condition='login="'+login+'" AND password="'+password+'"')
         if  result.__len__()>0:
             userID=result[0][0]
             dictionaryToJson = {"type":"authorizationResponse","response":"access_granted","UserID":userID}
@@ -266,7 +299,7 @@ class Messenger:
 
 
     def getOptionsByType(self,type):
-        result= dbc.select("Options",rows="*",condition='WHERE Type="'+type+'"')
+        result= dbc.select("Options",rows="*",condition='Type="'+type+'"')
         options=[]
         for option in result:
             options.append(option[1])
@@ -287,7 +320,7 @@ class Messenger:
                 if data is not None:
                     self.interpretMessage(bytearray.decode(data))
         except Exception as e:
-            print(e)
+            print("receiver exception",e)
             if self in clientsMessengers.values():
                 print("found self in clients")
                 clientsMessengers={key: val for key, val in clientsMessengers.items() if val != self}

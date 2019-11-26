@@ -46,11 +46,12 @@ def connectToDevice(device,behindNat):
     options=None
     if behindNat:
         result=serverMessenger.askForConnectionToDevice(device,behindNat)
+        response=result["response"]
+        if response !="sentAddressToBridge":
+            raise Exception(response)
         bridgeAdd=result["bridgeAddress"]
         options = result["options"]
         bridgeMessenger = msg.BridgeMessenger(udpSocket=udpSocket,bridgeAddress=(bridgeAdd[0],bridgeAdd[1]))
-        print(bridgeAdd)
-        print(options)
     else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         myPublicIp=get('https://api.ipify.org').text
