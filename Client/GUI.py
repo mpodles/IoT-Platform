@@ -20,6 +20,8 @@ from multiprocessing import freeze_support
 import threading as thr
 from kivy.clock import Clock
 from functools import partial
+import json
+
 
 sessionLogin=""
 sessionPassword=""
@@ -206,6 +208,7 @@ class RegularScreen(Screen):
         self.parent.screens[2].messenger =messenger
         self.parent.screens[2].buildButtons()
         self.parent.screens[2].stopFlag = False
+        self.parent.screens[2].textLabel.text = ""
         self.parent.screens[2].receiverThread= thr.Thread(target=self.parent.screens[2].getDataFromMessenger)
         self.parent.screens[2].receiverThread.start()
         self.parent.current="screen3"
@@ -272,6 +275,7 @@ class ConnectedScreen(Screen):
     def disconnect(self,button):
         self.stopFlag=True
         conn.disconnectFromBridge()
+        self.messenger=None
         self.parent.current="screen2"
 
     def getDataFromMessenger(self):
@@ -279,14 +283,27 @@ class ConnectedScreen(Screen):
             if self.stopFlag:
                 return
             data=self.messenger.receive()
-            self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
-            self.textField.scroll_to(self.textInput)
+            data=self.interpretData(data)
+            if data is not None:
+                self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
+                self.textField.scroll_to(self.textInput)
 
+
+    def interpretData(self,data):
+        if data =='k!e@e#p$a%l^i&v*e(':
+            return None
+        elif data=="ERROR: Module disconnected":
+            self.disconnect("Module disconnected")
+            return None
+        else:
+            return data
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text
+        dictionaryToJson = {"type": "consoleMessage","deviceAddress":self.connectedDevice[1], "deviceName": self.connectedDevice[2]}
+        msg = json.dumps(dictionaryToJson)
+        self.messenger.send_udp_msg(self.textInput.text)
         self.textInput.text=""
-        self.messenger.send_msg(self.textInput.text)
         self.textField.scroll_to(self.textInput)
 
     def buildButtons(self):

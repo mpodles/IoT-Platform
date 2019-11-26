@@ -9,9 +9,9 @@ import Bridge.Messenger as msg
 
 
 if __name__ == '__main__':
-    msg.connectToServer()
+   # msg.connectToServer()
     modulesThread = thr.Thread(target=msg.awaitForModules)
     modulesThread.start()
-    msg.registerBridge()
+    #msg.registerBridge()
     #time.sleep(2)
     #msg.registerBridge()

@@ -8,14 +8,14 @@ import struct
 class BridgeMessenger:
     udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     bridgeAddress=None
-    receiverProcess = mp.Process
     messageId = 0
+    stopSender=False
 
     def __init__(self,udpSocket,bridgeAddress=""):
         self.udpSocket = udpSocket
         self.bridgeAddress=bridgeAddress
-        #self.receiverThread = thr.Thread(target=self.receiver, args=())
-        #self.receiverThread.start()
+        self.senderThread = thr.Thread(target=self.keepaliveSender, args=())
+        self.senderThread.start()
 
 
     def recv_msg(self):
@@ -39,26 +39,38 @@ class BridgeMessenger:
             data.extend(packet)
         return data
 
-    def send_msg(self, msg):
+    def send_udp_msg(self, msg):
         # Prefix each message with a 4-byte length (network byte order)
-        self.messageId = self.messageId + 1
-        msg = struct.pack('>I', len(msg)) + str.encode(msg)
-        self.udpSocket.sendto(msg,self.bridgeAddress)
-        print("sent message ", msg)
+        #self.messageId = self.messageId + 1
+        #msg = struct.pack('>I', len(msg)) + str.encode(msg)
+        if self.bridgeAddress !="":
+            self.udpSocket.sendto(msg.encode(),self.bridgeAddress)
+            print("sent message ", msg)
+        else:
+            print("bridge address undefined")
 
-    def receiver(self):
-        global clientsMessengers
-        global bridgesMessengers
-        try:
-            print("receiver started")
-            while True:
-                data = self.recv_msg()
-                if data is not None:
-                    self.interpretMessage(bytearray.decode(data))
-        except Exception as e:
-            print(e)
+    # def receiver(self):
+    #     global clientsMessengers
+    #     global bridgesMessengers
+    #     try:
+    #         print("receiver started")
+    #         while True:
+    #             data = self.recv_msg()
+    #             if data is not None:
+    #                 self.interpretMessage(bytearray.decode(data))
+    #     except Exception as e:
+    #         print(e)
 
 
+
+    def keepaliveSender(self):
+        while True:
+            if self.stopSender :
+                print("exiting sender")
+                return
+            self.send_udp_msg("k!e@e#p$a%l^i&v*e(")
+            self.send_udp_msg("eldo")
+            time.sleep(2)
 
     def receive_old(self):
         global clientsMessengers
@@ -80,17 +92,9 @@ class BridgeMessenger:
                 data, addr = self.udpSocket.recvfrom(4096)
                 self.bridgeAddress = addr
                 if data is not None:
-                    data=bytes.decode(data)
-                    if data != 'k!e@e#p$a%l^i&v*e(':
-                        return data
+                    return bytes.decode(data)
         except Exception as e:
             print(e)
-
-    def keepaliveSender(self):
-        while True:
-            self.udpSocket.sendto(("keepalive").encode(), self.bridgeAddress)
-            time.sleep(2)
-
 
 
 

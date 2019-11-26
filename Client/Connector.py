@@ -65,6 +65,8 @@ def connectToDevice(device,behindNat):
 
 def disconnectFromBridge():
     global bridgeMessenger
+    bridgeMessenger.send_udp_msg("c!l@i#e$n%t^s&t*o(p)")
+    bridgeMessenger.stopSender=True
     bridgeMessenger=None
 
 def getBridgesForUser(userID):
