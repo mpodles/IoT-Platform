@@ -28,9 +28,14 @@ def delete(table,condition):
     mycursor.execute("DELETE FROM "+table+" WHERE "+condition)
     myDB.commit()
 
+def clearTables():
+    mycursor.execute("DELETE FROM Devices")
+    myDB.commit()
+    mycursor.execute("DELETE FROM Bridges")
+    myDB.commit()
 
 if __name__ == '__main__':
-    mycursor.execute('INSERT INTO Bridges (UserID,Address,Name) VALUES (1,"eloadres","elonazwa")')
+    #mycursor.execute('INSERT INTO Bridges (UserID,Address,Name) VALUES (1,"eloadres","elonazwa")')
     print("done")
 
 

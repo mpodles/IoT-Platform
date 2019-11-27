@@ -95,6 +95,7 @@ def udpReceiver(socket):
         #print(tcpToUdpMap)
 
 
+
 class Messenger:
     tcpSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     peerAdd=""
@@ -247,7 +248,7 @@ class Messenger:
         print(bridgesMessengers)
         print(clientsMessengers)
         deviceID,behindNat=data["deviceID"],bool(data["behindNat"])
-        result = dbc.select("Devices", rows="*", condition='WDeviceID="' + deviceID +'"')
+        result = dbc.select("Devices", rows="*", condition='DeviceID="' + deviceID +'"')
         if result.__len__() > 0:
             deviceAddress= result[0][1]
             deviceName= result[0][2]
@@ -327,10 +328,22 @@ class Messenger:
                 print("deleted self")
             elif self in bridgesMessengers.values():
                 print("found self in bridges")
+                self.deleteBridgeAndDevicesOnLostConnection()
                 bridgesMessengers = {key: val for key, val in bridgesMessengers.items() if val != self}
                 print("deleted self")
             else:
                 print("didnt find myself")
+
+    def deleteBridgeAndDevicesOnLostConnection(self):
+        check = dbc.select("Bridges", rows="BridgeID",
+                           condition='Address="' + str(self.peerAdd) + '" ')
+        if check.__len__() > 0:
+            bridgeID=check[0][0]
+            dbc.delete("Devices", 'BridgeID="' + str(bridgeID) + '"')
+            print("bridge's devices deleted")
+            dbc.delete("Bridges",'BridgeID="'+str(bridgeID)+'"')
+            print("bridge deleted")
+
 
     def recv_msg(self):
         # Read message length and unpack it into an integer
@@ -366,7 +379,7 @@ class Messenger:
 
 
 if __name__ == '__main__':
-
+    dbc.clearTables()
 
     bridgesMessengers = {}
     clientsMessengers = {}

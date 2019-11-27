@@ -1,4 +1,5 @@
 import kivy
+import time
 
 import Client.Connector as conn
 from kivy.app import App
@@ -159,17 +160,20 @@ class RegularScreen(Screen):
 
     def bridgeChange(self,spinner,text):
         self.devicesList.clear_widgets()
-        devices=self.devices[text]
-        for device in devices:
-            devicesRow = GridLayout()
-            devicesRow.size_hint_y = None
-            devicesRow.cols = 2
-            info = Label(text=("ID: "+str(device[0])+"   Address: "+str(device[1])+"\n Name: "+str(device[2])+"\n Type: "+str(device[3])), size=(Window.width * 3 / 5, 90), size_hint=(None, None))
-            connectButton = Button(text="Connect", size=(Window.width* 2/ 5, 90), size_hint=(None, None))
-            connectButton.bind(on_press=self.connectToDevice)
-            devicesRow.add_widget(info)
-            devicesRow.add_widget(connectButton)
-            self.devicesList.add_widget(devicesRow)
+        try:
+            devices=self.devices[text]
+            for device in devices:
+                devicesRow = GridLayout()
+                devicesRow.size_hint_y = None
+                devicesRow.cols = 2
+                info = Label(text=("ID: "+str(device[0])+"   Address: "+str(device[1])+"\n Name: "+str(device[2])+"\n Type: "+str(device[3])), size=(Window.width * 3 / 5, 90), size_hint=(None, None))
+                connectButton = Button(text="Connect", size=(Window.width* 2/ 5, 90), size_hint=(None, None))
+                connectButton.bind(on_press=self.connectToDevice)
+                devicesRow.add_widget(info)
+                devicesRow.add_widget(connectButton)
+                self.devicesList.add_widget(devicesRow)
+        except Exception as e:
+            print("Error changing bridge ",e)
 
 
 
@@ -181,6 +185,7 @@ class RegularScreen(Screen):
             devices=conn.getDevicesForBridge(bridge[0])
             self.devices["Address: "+str(bridge[2])+"\n Name: "+str(bridge[3])]=devices
             self.bridgesSpinner.values.append("Address: "+str(bridge[2])+"\n Name: "+str(bridge[3]))
+        self.bridgesSpinner.text = "Choose your bridge"
 
 
     def connectToDevice(self,button):
@@ -274,16 +279,24 @@ class ConnectedScreen(Screen):
 
 
     def disconnect(self,button):
-        self.stopFlag=True
-        conn.disconnectFromBridge()
-        self.messenger=None
-        self.parent.current="screen2"
+        self.stopFlag=True #stop receiving
+        conn.disconnectFromBridge() #tell messenger to send disconnect info and stop sending keepalives
+        self.messenger=None #delete messenger
+        time.sleep(2) #wait for server to update
+        self.parent.current = "screen2"
+        self.parent.screens[1].getDataForUser("no button")#get data again
+
 
     def getDataFromMessenger(self):
         while True:
             if self.stopFlag:
                 return
-            data=self.messenger.receive()
+            try:
+                data=self.messenger.receive()
+            except Exception as e:
+                print("bridge receiver error",e)
+                makePopup("Error", "Lost bridge connection")
+                self.disconnect("Lost bridge connection")
             data=self.interpretData(data)
             if data is not None:
                 self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
@@ -294,17 +307,21 @@ class ConnectedScreen(Screen):
         if data =='k!e@e#p$a%l^i&v*e(':
             return None
         elif data=="ERROR: Module disconnected":
+            makePopup("Error", "Module with device disconnected")
             self.disconnect("Module disconnected")
-            makePopup("Error","Module with device disconnected")
             return None
         else:
-            return data
+            parsedData=json.loads(data)
+            deviceName=parsedData["deviceName"]
+            deviceAddress=parsedData["deviceAddress"]
+            if self.connectedDevice[1]==deviceAddress and self.connectedDevice[2]==deviceName:
+                return parsedData["data"]
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text
-        dictionaryToJson = {"type": "consoleMessage","deviceAddress":self.connectedDevice[1], "deviceName": self.connectedDevice[2]}
-        msg = json.dumps(dictionaryToJson)
-        self.messenger.send_udp_msg(self.textInput.text)
+        dictionaryToJson = {"type": "consoleMessage","deviceAddress":self.connectedDevice[1], "deviceName": self.connectedDevice[2],"payload":self.textInput.text}
+        msg = self.messenger.constructMessage(dictionaryToJson)
+        self.messenger.send_udp_msg(msg)
         self.textInput.text=""
         self.textField.scroll_to(self.textInput)
 
@@ -319,7 +336,14 @@ class ConnectedScreen(Screen):
             self.buttons.add_widget(customButton)
 
     def customButton(self,button):
-        print(button.text)
+        command=button.text
+        self.textLabel.text += '\n Sent command "'+command+'": ' + self.textInput.text
+        dictionaryToJson = {"type": "consoleCommand", "command":command,"deviceAddress": self.connectedDevice[1],
+                            "deviceName": self.connectedDevice[2], "payload": self.textInput.text}
+        msg = self.messenger.constructMessage(dictionaryToJson)
+        self.messenger.send_udp_msg(msg)
+        self.textInput.text = ""
+        self.textField.scroll_to(self.textInput)
 
 
 class IoTPlatformClientApp(App):

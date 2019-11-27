@@ -49,6 +49,12 @@ class BridgeMessenger:
         else:
             print("bridge address undefined")
 
+
+    def constructMessage(self,data):
+        data["messageID"]=self.messageId
+        msg=json.dumps(data)
+        return msg
+
     # def receiver(self):
     #     global clientsMessengers
     #     global bridgesMessengers
@@ -86,14 +92,11 @@ class BridgeMessenger:
     def receive(self):
         global clientsMessengers
         global bridgesMessengers
-        try:
-            while True:
-                data, addr = self.udpSocket.recvfrom(4096)
-                self.bridgeAddress = addr
-                if data is not None:
-                    return bytes.decode(data)
-        except Exception as e:
-            print(e)
+        while True:
+            data, addr = self.udpSocket.recvfrom(4096)
+            self.bridgeAddress = addr
+            if data is not None:
+                return bytes.decode(data)
 
 
 
@@ -166,6 +169,10 @@ class ServerMessenger:
         except Exception as e:
             print(e)
 
+    def constructMessage(self,data):
+        data["messageID"]=self.messageId
+        msg=json.dumps(data)
+        return msg
 
     def recv_msg(self):
         # Read message length and unpack it into an integer
