@@ -51,3 +51,9 @@ class Client(namedtuple('Client', 'conn, pub, priv')):
 
     def peer_msg(self):
         return addr_to_msg(self.pub) + b'|' + addr_to_msg(self.priv)
+
+
+if __name__ == '__main__':
+    dictionary={3:2,4:3}
+    if 5 in dictionary:
+        print(dictionary[4])

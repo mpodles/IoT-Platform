@@ -13,15 +13,15 @@ option=[opt.Options("rfidreader",["read"])]
 data= 30
 
 def on_option(option,data):
-    print(options," ",data)
+    print("REACHED RFID ON OPTION ",option," ",data)
 
 def on_data(data):
-    print (data)
+    print ("REACHED RFID ON DATA ",data)
 
 msg.connectToBridge()
 msg.registerDevices(devices)
 msg.registerOptions(options)
-#msg.bindDevice(device=device,on_data=on_data,on_option=on_option)
+msg.bind(device=device,on_data=on_data,on_option=on_option)
 i=0
 while True:
     time.sleep(3)

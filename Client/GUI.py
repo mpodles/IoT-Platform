@@ -284,7 +284,8 @@ class ConnectedScreen(Screen):
         self.messenger=None #delete messenger
         time.sleep(2) #wait for server to update
         self.parent.current = "screen2"
-        self.parent.screens[1].getDataForUser("no button")#get data again
+        if button == 'error':
+            self.parent.screens[1].getDataForUser("no button")#get data again
 
 
     def getDataFromMessenger(self):
@@ -296,7 +297,7 @@ class ConnectedScreen(Screen):
             except Exception as e:
                 print("bridge receiver error",e)
                 makePopup("Error", "Lost bridge connection")
-                self.disconnect("Lost bridge connection")
+                self.disconnect("error")
             data=self.interpretData(data)
             if data is not None:
                 self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
@@ -308,7 +309,7 @@ class ConnectedScreen(Screen):
             return None
         elif data=="ERROR: Module disconnected":
             makePopup("Error", "Module with device disconnected")
-            self.disconnect("Module disconnected")
+            self.disconnect("error")
             return None
         else:
             parsedData=json.loads(data)

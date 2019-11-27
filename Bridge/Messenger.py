@@ -2,7 +2,6 @@ import json
 import socket
 import time
 import threading as thr
-import multiprocessing as mp
 import struct
 import Bridge.Setup as setup
 import Bridge.Options
@@ -24,7 +23,7 @@ messengersToModules=None
 
 devicesInModule=None
 
-devicesBound=None
+boundDevices=None
 
 
 def connectToServer(address='localhost',port=1100):
@@ -36,14 +35,16 @@ def connectToServer(address='localhost',port=1100):
     seenAs=bytes.decode(tcpSocket.recv(1024))
     print("I'm seen as tcp: ",seenAs)
     serverMessenger = OutsideServerMessenger(tcpSocket=tcpSocket)
-    #receiver = mp.Process(target=serverReceiver, args=(sock,))
+
     sender = thr.Thread(target=udpTunnel, args=())
     #receiver.start()
     sender.start()
 
+
 def registerBridge():
     global serverMessenger
     serverMessenger.sendRegistrationRequest()
+
 
 def udpTunnel():
     global udpSocket
@@ -52,6 +53,7 @@ def udpTunnel():
     while True:
         udpSocket.sendto(("keepalive connected as"+seenAs).encode(),('localhost', 1100))
         time.sleep(2)
+
 
 def awaitForModules():
     global modulesSocket
@@ -67,34 +69,40 @@ def awaitForModules():
         newModulesMessenger=BridgeToModuleMessenger(conn,add)
         messengersToModules[add]= newModulesMessenger
 
+
 def connectToBridge():
     global messengerForModules
-    global devicesBound
-    devicesBound={}
+    global boundDevices
+    boundDevices={}
     socketForModules= socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     socketForModules.connect(('localhost',2200))
     messengerForModules=ModuleToBridgeMessenger(tcpSocket=socketForModules)
+
 
 def registerDevices(devices):
     global messengerForModules
     messengerForModules.sendDevicesToBridge(devices)
 
+
 def registerOptions(options):
     global messengerForModules
     messengerForModules.sendOptionsToBridge(options)
 
+
 def sendDataFromDevice(device,data):
     global messengerForModules
     messengerForModules.sendDataFromDevice(device,data)
+
 
 def getData():
     global messengerForModules
     data= messengerForModules.receive()
     return data
 
+
 def bind(device,on_data,on_option):
-    global devicesBound
-    devicesBound[(device.name,device.address)]=(on_data,on_option)
+    global boundDevices
+    boundDevices[(device.name,device.address)]=(on_data,on_option)
 
 
 
@@ -250,6 +258,7 @@ class ModuleToBridgeMessenger:
             '"deviceName":"' + device.name + '", "deviceAddress":"'+device.address+'" ,"data":"' + str(data) + '"}'
         self.send_msg(msg)
 
+
     def sendOptionsToBridge(self,options):
         optionsList = []
         for option in options:
@@ -259,6 +268,7 @@ class ModuleToBridgeMessenger:
         msg = '{"messageID":"' + str(self.messageId) + '",' \
                                                        '"type":"optionsToBridge","options":' + optionsStr + '}'
         self.send_msg(msg)
+
 
     def sendDevicesToBridge(self,devices):
         devicesList=[]
@@ -276,6 +286,7 @@ class ModuleToBridgeMessenger:
         data["messageID"]=self.messageId
         msg=json.dumps(data)
         return msg
+
 
     def getResult(self):
         try:
@@ -297,6 +308,7 @@ class ModuleToBridgeMessenger:
         msglen = struct.unpack('>I', raw_msglen)[0]
         # Read the message data
         return self.recvall(msglen)
+
 
     def recvall(self, n):
         # Helper function to recv n bytes or return None if EOF is hit
@@ -326,6 +338,7 @@ class ModuleToBridgeMessenger:
         except Exception as e:
             print(e)
 
+
     def receiver(self):
         print("receiver started")
         while True:
@@ -338,6 +351,7 @@ class ModuleToBridgeMessenger:
 
 
     def interpretMessage(self,data):
+        global boundDevices
         print("module received" ,data)
         data=data.replace('"{','{')
         data=data.replace('}"','}')
@@ -347,10 +361,24 @@ class ModuleToBridgeMessenger:
         self.messageId= msgID
         clientMessage = parsedData["payload"]
         msgType=clientMessage["type"]
+        deviceName=clientMessage["deviceName"]
+        deviceAddress = clientMessage["deviceAddress"]
+        data= clientMessage["payload"]
+        print(boundDevices)
+        print(deviceName,deviceAddress,data)
         if msgType == "consoleMessage":
-            print("module received consoleMesage ",data)
+            try:
+                functions = boundDevices[(deviceName, deviceAddress)]
+                functions[0](data)
+            except Exception as e:
+                print("Error, device not bound: ",e)
         elif msgType =="consoleCommand":
-            print("module received consoleCommand ", data)
+            command=clientMessage["command"]
+            try:
+                functions=boundDevices[(deviceName,deviceAddress)]
+                functions[1](command,data)
+            except Exception as e:
+                print("Error, device not bound: ",e)
 
 
 
@@ -361,7 +389,6 @@ class OutsideServerMessenger:
     tcpSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     udpSocket=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     seenAs=""
-    #result={}
     receiverThread=thr.Thread
     senderThread=thr.Thread
     messageId = 0
@@ -373,7 +400,7 @@ class OutsideServerMessenger:
         #self.senderThread= thr.Thread(target=self.sender)
         #self.senderThread.start()
         self.receiverThread = thr.Thread(target=self.receiver, args=())
-        #self.senderProcess = mp.Process(target=self.sender, args=())
+
         self.receiverThread.start()
         #self.senderProcess.start()
 
@@ -383,6 +410,7 @@ class OutsideServerMessenger:
             self.messageId) + '","type":"dataFromDevice",' \
         '"deviceName":"' + deviceName + '","deviceAddress":"' + deviceAddress + '", "data":"'+data+'"}'
         self.send_msg(msg)
+
 
     def sendRegistrationRequest(self):
         msg='{"messageID":"'+str(self.messageId)+'","type":"registrationRequest","bridgeName":"'+setup.bridgeName+'","bridgeUser":"'+setup.userName+'"}'
@@ -394,16 +422,19 @@ class OutsideServerMessenger:
             self.messageId) + '","type":"devicesRegistrationRequest","bridgeName":"' + setup.bridgeName + '","devices":"' + str(devices) + '"}'
         self.send_msg(msg)
 
+
     def sendDevicesDeletionRequest(self,devices):
         msg = '{"messageID":"' + str(
             self.messageId) + '","type":"devicesDeletionRequest","bridgeName":"' + setup.bridgeName + '","devices":"' + str(
             devices) + '"}'
         self.send_msg(msg)
 
+
     def sendOptionRegistrationRequest(self,options):
         msg = '{"messageID":"' + str(
             self.messageId) + '","type":"optionsRegistrationRequest","options":"' + str(options) + '"}'
         self.send_msg(msg)
+
 
     def handleDevicesConnectionRequest(self,data):
         global udpSocket
@@ -422,6 +453,7 @@ class OutsideServerMessenger:
         else:
             newUdpSocket=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
             clientMessenger = OutsideClientMessenger(udpSocket=newUdpSocket,module=currentModule,address=clientAddress,device=(deviceName,deviceAddress))
+
 
     def constructMessage(self,data):
         data["messageID"]=self.messageId
@@ -448,6 +480,7 @@ class OutsideServerMessenger:
         msglen = struct.unpack('>I', raw_msglen)[0]
         # Read the message data
         return self.recvall(msglen)
+
 
     def recvall(self, n):
         # Helper function to recv n bytes or return None if EOF is hit
@@ -477,6 +510,7 @@ class OutsideServerMessenger:
                     self.interpretMessage(bytearray.decode(data))
         except Exception as e:
             print("error in server receiver ", e)
+
 
     def interpretMessage(self,data):
         print("received" ,data)
@@ -526,6 +560,7 @@ class OutsideClientMessenger:
             self.messageId) + '","type":"dataFromDevice" ,"deviceName":"'+str(self.device[0])+'","deviceAddress":"'+str(self.device[1])+'","data":'+data+'}'
         self.send_udp_msg(msg)
 
+
     def constructMessage(self,data):
         data["messageID"]=self.messageId
         msg=json.dumps(data)
@@ -540,6 +575,7 @@ class OutsideClientMessenger:
         msglen = struct.unpack('>I', raw_msglen)[0]
         # Read the message data
         return self.recvall(msglen)
+
 
     def recvall(self, n):
         # Helper function to recv n bytes or return None if EOF is hit
@@ -563,11 +599,13 @@ class OutsideClientMessenger:
         self.udpSocket.sendto(msg.encode(), (str(self.clientAddress[0]), int(self.clientAddress[1])))
         #print("sent message ",msg)
 
+
     def receiver(self):
         try:
-            print("receiver started")
+            print("receiver started ",self)
             while True:
                 if self.stopReceiver:
+                    print("exiting receiver ",self)
                     return
                 data, addr = self.udpSocket.recvfrom(4096)
                 if data is not None:
@@ -575,15 +613,17 @@ class OutsideClientMessenger:
         except Exception as e:
             self.stopSender= True
 
+
     def keepaliveSender(self):
-        print("starting sender, i'm ",self)
+        print("starting sender ",self)
         while True:
             if self.stopSender:
-                print("exiting sender")
+                print("exiting sender ",self)
                 return
             self.send_udp_msg("k!e@e#p$a%l^i&v*e(")
             print("sent keepalive and i'm ", self)
             time.sleep(2)
+
 
     def moduleChecker(self):
         while True:
@@ -597,7 +637,6 @@ class OutsideClientMessenger:
                 return
 
 
-
     def interpretMessage(self,data):
         if data == "k!e@e#p$a%l^i&v*e(":
             pass
@@ -608,9 +647,6 @@ class OutsideClientMessenger:
             self.stopChecker=True
         else:
             try:
-                #data=json.loads(data)
                 self.currentModule.sendDataToDevice(self.device, data)
             except Exception as e:
                 print("error in client message interpreter ",e)
-        # if msgType == "devicesToBridge":
-        #     self.handleDevicesFromModules(parsedData)

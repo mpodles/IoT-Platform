@@ -4,7 +4,6 @@ import time
 import multiprocessing as mp
 import struct
 import Server.DatabaseConnection as dbc
-import Server.UDPServer
 import Server.Messengers as messengers
 
 
