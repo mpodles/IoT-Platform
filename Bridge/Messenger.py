@@ -4,6 +4,7 @@ import time
 import threading as thr
 import struct
 import Bridge.Setup as setup
+from datetime import datetime
 import Bridge.Options
 import Bridge.Device
 
@@ -91,7 +92,8 @@ def registerOptions(options):
 
 def sendDataFromDevice(device,data):
     global messengerForModules
-    messengerForModules.sendDataFromDevice(device,data)
+    currentTime=datetime.now().time()
+    messengerForModules.sendDataFromDevice(device,data,currentTime)
 
 
 def getData():
@@ -140,8 +142,9 @@ class BridgeToModuleMessenger:
             payload= data["data"]
             deviceName=data["deviceName"]
             deviceAddress=data["deviceAddress"]
+            time=data["time"]
             if clientMessenger.device==(deviceName,deviceAddress):
-                clientMessenger.sendDataFromDevice(deviceName,deviceAddress,payload)
+                clientMessenger.sendDataFromDevice(deviceName,deviceAddress,payload,time)
 
 
     def handleDevicesFromModules(self,data):
@@ -252,10 +255,9 @@ class ModuleToBridgeMessenger:
         self.receiverThread.start()
 
 
-    def sendDataFromDevice(self,device,data):
-        msg = '{"messageID":"' + str(
-            self.messageId) + '","type":"dataFromDevice", ' \
-            '"deviceName":"' + device.name + '", "deviceAddress":"'+device.address+'" ,"data":"' + str(data) + '"}'
+    def sendDataFromDevice(self,device,data,time):
+        msg = '{"messageID":"' + str(self.messageId) + '","type":"dataFromDevice", ' \
+            '"deviceName":"' + device.name + '", "deviceAddress":"'+device.address+'" ,"data":"' + str(data) + '","time":"' + str(time) +'"}'
         self.send_msg(msg)
 
 
@@ -405,11 +407,11 @@ class OutsideServerMessenger:
         #self.senderProcess.start()
 
 
-    def sendDataFromDevice(self,deviceName,deviceAddress,data):
-        msg = '{"messageID":"' + str(
-            self.messageId) + '","type":"dataFromDevice",' \
-        '"deviceName":"' + deviceName + '","deviceAddress":"' + deviceAddress + '", "data":"'+data+'"}'
-        self.send_msg(msg)
+    # def sendDataFromDevice(self,deviceName,deviceAddress,data):
+    #     msg = '{"messageID":"' + str(
+    #         self.messageId) + '","type":"dataFromDevice",' \
+    #     '"deviceName":"' + deviceName + '","deviceAddress":"' + deviceAddress + '", "data":"'+data+'"}'
+    #     self.send_msg(msg)
 
 
     def sendRegistrationRequest(self):
@@ -555,10 +557,11 @@ class OutsideClientMessenger:
         self.moduleCheckerThread.start()
 
 
-    def sendDataFromDevice(self,deviceName,deviceAddress,data):
-        msg = '{"messageID":"' + str(
-            self.messageId) + '","type":"dataFromDevice" ,"deviceName":"'+str(self.device[0])+'","deviceAddress":"'+str(self.device[1])+'","data":'+data+'}'
-        self.send_udp_msg(msg)
+    def sendDataFromDevice(self,deviceName,deviceAddress,data,time):
+        if deviceName ==str(self.device[0]) and deviceAddress == str(self.device[1]):
+            msg = '{"messageID":"' + str(self.messageId) + '","type":"dataFromDevice" ' \
+                ',"deviceName":"'+deviceName+'","deviceAddress":"'+deviceAddress+'","data":'+data+ ',"time":"' + str(time) +'"}'
+            self.send_udp_msg(msg)
 
 
     def constructMessage(self,data):

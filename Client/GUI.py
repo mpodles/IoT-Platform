@@ -298,25 +298,26 @@ class ConnectedScreen(Screen):
                 print("bridge receiver error",e)
                 makePopup("Error", "Lost bridge connection")
                 self.disconnect("error")
-            data=self.interpretData(data)
+            time,data=self.interpretData(data)
             if data is not None:
-                self.textLabel.text += "\n Received from ("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
+                self.textLabel.text += "\n ( "+str(time)+" )" \
+        "("+str(self.connectedDevice[1])+" , "+self.connectedDevice[2]+"): " + str(data)
                 self.textField.scroll_to(self.textInput)
 
 
     def interpretData(self,data):
         if data =='k!e@e#p$a%l^i&v*e(':
-            return None
+            return None,None
         elif data=="ERROR: Module disconnected":
             makePopup("Error", "Module with device disconnected")
             self.disconnect("error")
-            return None
+            return None,None
         else:
             parsedData=json.loads(data)
             deviceName=parsedData["deviceName"]
             deviceAddress=parsedData["deviceAddress"]
             if self.connectedDevice[1]==deviceAddress and self.connectedDevice[2]==deviceName:
-                return parsedData["data"]
+                return parsedData["time"],parsedData["data"]
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text
