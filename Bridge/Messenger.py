@@ -198,7 +198,7 @@ class BridgeToModuleMessenger:
         self.messageId=self.messageId+1
         msg = struct.pack('>I', len(msg)) + str.encode(msg)
         self.tcpSocket.sendall(msg)
-        print("sent message ",msg)
+        print("sent message to module",msg)
 
 
     def constructMessage(self,data):
@@ -328,7 +328,7 @@ class ModuleToBridgeMessenger:
         self.messageId=self.messageId+1
         msg = struct.pack('>I', len(msg)) + str.encode(msg)
         self.tcpSocket.sendall(msg)
-        print("sent message ",msg)
+        print("sent message to bridge ",msg)
 
 
     def receive(self):
@@ -399,8 +399,8 @@ class OutsideServerMessenger:
         #self.tcpSocket.setblocking(0)
         self.udpSocket=udpSocket
         #self.seenAs=seenAs
-        #self.senderThread= thr.Thread(target=self.sender)
-        #self.senderThread.start()
+        self.senderThread= thr.Thread(target=self.sender)
+        self.senderThread.start()
         self.receiverThread = thr.Thread(target=self.receiver, args=())
 
         self.receiverThread.start()
@@ -462,16 +462,11 @@ class OutsideServerMessenger:
         msg=json.dumps(data)
         return msg
 
-    # def getResult(self):
-    #     try:
-    #         print("gettingResult")
-    #         data=bytearray.decode(self.recv_msg())
-    #         print("result is",data)
-    #         dictData=json.loads(data)
-    #         return dictData
-    #             # self.interpretMessage(data)
-    #     except Exception as e:
-    #         print(e)
+
+    def sender(self):
+        while True:
+            time.sleep(2)
+            self.send_msg("keepalive")
 
 
     def recv_msg(self):
@@ -500,7 +495,7 @@ class OutsideServerMessenger:
         self.messageId=self.messageId+1
         msg = struct.pack('>I', len(msg)) + str.encode(msg)
         self.tcpSocket.sendall(msg)
-        print("sent message ",msg)
+        #print("sent message to server  ",msg)
 
 
     def receiver(self):
@@ -545,14 +540,20 @@ class OutsideClientMessenger:
     stopChecker = False
     stopReceiver =False
     def __init__(self,udpSocket,module,address,device):
+        self.stopSender = False
+        self.moduleDisconnected = False
+        self.stopChecker = False
+        self.stopReceiver = False
         self.currentModule=module
         self.udpSocket=udpSocket
         self.clientAddress=(address[0],address[1])
         self.device=device
         self.receiverThread = thr.Thread(target=self.receiver, args=())
         self.receiverThread.start()
+
         self.senderThread = thr.Thread(target=self.keepaliveSender)
         self.senderThread.start()
+
         self.moduleCheckerThread=thr.Thread(target=self.moduleChecker)
         self.moduleCheckerThread.start()
 
@@ -561,7 +562,8 @@ class OutsideClientMessenger:
         if deviceName ==str(self.device[0]) and deviceAddress == str(self.device[1]):
             msg = '{"messageID":"' + str(self.messageId) + '","type":"dataFromDevice" ' \
                 ',"deviceName":"'+deviceName+'","deviceAddress":"'+deviceAddress+'","data":'+data+ ',"time":"' + str(time) +'"}'
-            self.send_udp_msg(msg)
+            if not self.stopSender:
+                self.send_udp_msg(msg)
 
 
     def constructMessage(self,data):
@@ -600,27 +602,38 @@ class OutsideClientMessenger:
 
     def send_udp_msg(self,msg):
         self.udpSocket.sendto(msg.encode(), (str(self.clientAddress[0]), int(self.clientAddress[1])))
-        #print("sent message ",msg)
+        #print("sent message to cient ",msg)
 
 
     def receiver(self):
-        try:
-            print("receiver started ",self)
-            while True:
-                if self.stopReceiver:
-                    print("exiting receiver ",self)
-                    return
+        print("receiver started ",self)
+        exceptionsCounter=0
+        while True:
+            if self.stopReceiver:
+                print("exiting receiver ",self)
+                self.stopChecker = True
+                self.stopSender = True
+                return
+            try:
                 data, addr = self.udpSocket.recvfrom(4096)
                 if data is not None:
                     self.interpretMessage(bytes.decode(data))
-        except Exception as e:
-            self.stopSender= True
+                    exceptionsCounter=0
+            except Exception as e:
+                exceptionsCounter+=1
+                print("client receiver exception that sets stopSender = True ",exceptionsCounter, e)
+                if exceptionsCounter>50:
+                    self.stopSender= True
+                    self.stopReceiver = True
+                    self.stopChecker =True
 
 
     def keepaliveSender(self):
         print("starting sender ",self)
         while True:
             if self.stopSender:
+                self.stopChecker = True
+                self.stopReceiver = True
                 print("exiting sender ",self)
                 return
             self.send_udp_msg("k!e@e#p$a%l^i&v*e(")
@@ -637,6 +650,7 @@ class OutsideClientMessenger:
                 print("module disconnected")
                 return
             if self.stopChecker:
+                print("exiting module checker", self)
                 return
 
 

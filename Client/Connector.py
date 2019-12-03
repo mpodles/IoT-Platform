@@ -21,6 +21,8 @@ seenAs=None
 
 connectedToServer=False
 
+stopUdpSender=False
+
 def connectToServer(address='localhost',port=1101):
     global serverMessenger
     global seenAs
@@ -64,10 +66,19 @@ def connectToDevice(device,behindNat):
         #result = serverMessenger.askForConnectionToDevice(device, behindNat)
         #serverMessenger = msg.Messenger(sock, add)
 
+def disconnectFromServer():
+    global serverMessenger
+    global connectedToServer
+    global stopUdpSender
+    connectedToServer = False
+    stopUdpSender=True
+    serverMessenger=None
+
 def disconnectFromBridge():
     global bridgeMessenger
-    bridgeMessenger.send_udp_msg("c!l@i#e$n%t^s&t*o(p)")
-    bridgeMessenger.stopSender=True
+    if bridgeMessenger is not None:
+        bridgeMessenger.send_udp_msg("c!l@i#e$n%t^s&t*o(p)")
+        bridgeMessenger.stopSender=True
     bridgeMessenger=None
 
 def getBridgesForUser(userID):
@@ -92,6 +103,8 @@ def udpTunnel():
     global udpSocket
     print("sender started")
     while True:
+        if stopUdpSender:
+            return
         udpSocket.sendto(("keepalive connected as"+seenAs).encode(),('localhost', 1101))
         time.sleep(2)
 # def waitForResult():

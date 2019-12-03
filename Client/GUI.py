@@ -278,6 +278,7 @@ class ConnectedScreen(Screen):
         self.add_widget(self.layout)
 
 
+
     def disconnect(self,button):
         self.stopFlag=True #stop receiving
         conn.disconnectFromBridge() #tell messenger to send disconnect info and stop sending keepalives
@@ -291,6 +292,7 @@ class ConnectedScreen(Screen):
     def getDataFromMessenger(self):
         while True:
             if self.stopFlag:
+                print("stopping getting data from bridge")
                 return
             try:
                 data=self.messenger.receive()
@@ -298,6 +300,7 @@ class ConnectedScreen(Screen):
                 print("bridge receiver error",e)
                 makePopup("Error", "Lost bridge connection")
                 self.disconnect("error")
+                return
             time,data=self.interpretData(data)
             if data is not None:
                 self.textLabel.text += "\n ( "+str(time)+" )" \
@@ -318,6 +321,8 @@ class ConnectedScreen(Screen):
             deviceAddress=parsedData["deviceAddress"]
             if self.connectedDevice[1]==deviceAddress and self.connectedDevice[2]==deviceName:
                 return parsedData["time"],parsedData["data"]
+            else:
+                return None,None
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text
@@ -359,9 +364,35 @@ class IoTPlatformClientApp(App):
         self.screenManager.add_widget(self.connectedScreen)
         self.screenManager.current = 'screen1'
 
-        Window.bind(on_resize=self.resize)
-
+        Window.bind(on_resize=self.resize,on_request_close=self.on_request_close)
         return self.screenManager
+
+
+
+    def on_request_close(self, *args):
+        self.textpopup(title='Exit', text='Are you sure?')
+        self.screenManager.screens[2].stopFlag=True
+        conn.disconnectFromBridge()
+        conn.disconnectFromServer()
+        print("done the things")
+        return True
+
+    def textpopup(self, title='', text=''):
+        """Open the pop-up with the name.
+
+        :param title: title of the pop-up to open
+        :type title: str
+        :param text: main text of the pop-up to open
+        :type text: str
+        :rtype: None
+        """
+        box = BoxLayout(orientation='vertical')
+        box.add_widget(Label(text=text))
+        mybutton = Button(text='OK', size_hint=(1, 0.25))
+        box.add_widget(mybutton)
+        popup = Popup(title=title, content=box, size_hint=(None, None), size=(600, 300))
+        mybutton.bind(on_release=self.stop)
+        popup.open()
 
     def resize(self,me,x_size,y_size):
 

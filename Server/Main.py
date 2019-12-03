@@ -114,6 +114,8 @@ class Messenger:
 
     def interpretMessage(self,data):
         print("received" ,data)
+        if data=="keepalive":
+            return
         parsedData=json.loads(data)
         msgID= int(parsedData["messageID"])
         self.messageId= msgID
