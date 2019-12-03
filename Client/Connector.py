@@ -23,7 +23,7 @@ connectedToServer=False
 
 stopUdpSender=False
 
-def connectToServer(address='localhost',port=1101):
+def connectToServer(address='192.168.0.248',port=1101):
     global serverMessenger
     global seenAs
     global tcpSocket
