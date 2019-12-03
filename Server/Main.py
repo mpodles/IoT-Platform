@@ -381,6 +381,9 @@ class Messenger:
 
 
 if __name__ == '__main__':
+    dbc.createDatabaseAndTables("192.168.1.12","root","password")
+
+    dbc.connectToDatabase("192.168.1.12","root","password")
     dbc.clearTables()
 
     bridgesMessengers = {}
