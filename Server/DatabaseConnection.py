@@ -8,7 +8,7 @@ def connectToDatabase(host ,user ,password):
     global myDB
     global mycursor
     try:
-        myDB = mysql.connector.connect(host=host, user=user ,passwd=password ,database="IoTPlatform")
+        myDB = mysql.connector.connect(host=host, user=user ,passwd=password ,database="iotplatform")
         mycursor =myDB.cursor()
     except Exception as e:
         print (e)
@@ -48,12 +48,12 @@ def createDatabaseAndTables(host, user, password):
     mycursor = myDB.cursor()
     mycursor.execute("SHOW DATABASES")
     result = mycursor.fetchall()
-    if ('IoTPlatform',) in result or ('iotplatform',) in result:
+    if  ('iotplatform',) in result:
         databaseExists = True
     else:
         databaseExists = False
     if databaseExists:
-        myDB = mysql.connector.connect(host=host, user=user, passwd=password, database="IoTPlatform")
+        myDB = mysql.connector.connect(host=host, user=user, passwd=password, database="iotplatform")
         mycursor = myDB.cursor()
         mycursor.execute("SHOW TABLES")
         tables = mycursor.fetchall()
@@ -86,8 +86,8 @@ def createDatabaseAndTables(host, user, password):
 
 
     else:
-        mycursor.execute("CREATE DATABASE IoTPlatform")
-        myDB = mysql.connector.connect(host=host, user=user, passwd=password, database="IoTPlatform")
+        mycursor.execute("CREATE DATABASE iotplatform")
+        myDB = mysql.connector.connect(host=host, user=user, passwd=password, database="iotplatform")
         mycursor = myDB.cursor()
         mycursor.execute(
             "CREATE TABLE `bridges` (`BridgeID` int(11) NOT NULL,`UserID` int(11) NOT NULL, `Address` varchar(255) NOT NULL, `Name` varchar(255) NOT NULL) ")
