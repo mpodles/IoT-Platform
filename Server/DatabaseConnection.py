@@ -1,20 +1,20 @@
 
 import mysql.connector
 
-myD B =None
-mycurso r =None
+myDB =None
+mycursor =None
 
 def connectToDatabase(host ,user ,password):
     global myDB
     global mycursor
     try:
         myDB = mysql.connector.connect(host=host, user=user ,passwd=password ,database="IoTPlatform")
-        mycurso r =myDB.cursor()
+        mycursor =myDB.cursor()
     except Exception as e:
         print (e)
 
 def select(table ,rows="*" ,condition=""):
-    mycursor.execute("SELECT  " +row s +" FROM  " +tabl e +" WHERE  " +condition)
+    mycursor.execute("SELECT  " +rows +" FROM  " +table +" WHERE  " +condition)
     myresult =mycursor.fetchall()
     return myresult
 
