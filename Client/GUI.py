@@ -55,6 +55,11 @@ class LoginScreen(Screen):
         self.passwordInput = TextInput(password=True, multiline=False)
         self.passwordInput.text="elo"
 
+        self.serverLabel = Label(text='Server Add')
+
+        self.serverInput = TextInput(multiline=False)
+        self.serverInput.text = "192.168.0.248"
+
         self.loginButton =Button(text='Login')
         self.loginButton.bind(on_press=self.login)
 
@@ -65,13 +70,16 @@ class LoginScreen(Screen):
         self.layout.add_widget(self.usernameInput)
         self.layout.add_widget(self.passwordLabel)
         self.layout.add_widget(self.passwordInput)
+        self.layout.add_widget(self.serverLabel)
+        self.layout.add_widget(self.serverInput)
         self.layout.add_widget(self.loginButton)
         self.layout.add_widget(self.connectButton)
         self.add_widget(self.layout)
 
     def connect(self,button):
         try:
-            conn.connectToServer()
+            add=self.serverInput.text
+            conn.connectToServer(address=add)
             makePopup("info","Connected")
             self.isConnected=True
         except Exception as e:
@@ -87,7 +95,7 @@ class LoginScreen(Screen):
                 self.parent.screens[1].userID = result
                 Window.size=1000,800
             else:
-                self.makePopup("error", "login/password not found")
+                makePopup("error", "login/password not found")
         else:
             makePopup("error","not connected to server")
 
