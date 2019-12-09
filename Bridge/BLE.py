@@ -1,8 +1,8 @@
 import time
 
-import Bridge.Messenger as msg
-import Bridge.Device as dev
-import Bridge.Options as opt
+import Messenger as msg
+import Device as dev
+import Options as opt
 
 
 
@@ -36,6 +36,8 @@ while True:
     msg.sendDataFromDevice(device,data+i)
     msg.sendDataFromDevice(device2, data + 2*i)
     i+=15
+    if i>2000:
+        i=0
 #while True:
 #    data=msg.getData()
 #    print()
