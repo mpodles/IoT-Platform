@@ -23,7 +23,7 @@ connectedToServer=False
 
 stopUdpSender=False
 
-def connectToServer(address='192.168.0.248',port=1101):
+def connectToServer(address='zace.hopto.org',port=1101):
     global serverMessenger
     global seenAs
     global tcpSocket
@@ -36,7 +36,7 @@ def connectToServer(address='192.168.0.248',port=1101):
         seenAs=bytes.decode(tcpSocket.recv(1024))
         print("I'm seen as tcp: ",seenAs)
         serverMessenger = msg.ServerMessenger(tcpSocket=tcpSocket)
-        sender = thr.Thread(target=udpTunnel, args=())
+        sender = thr.Thread(target=udpTunnel, args=(address,))
         sender.start()
         isConnectedToServer=True
 
@@ -56,8 +56,10 @@ def connectToDevice(device,behindNat):
         bridgeMessenger = msg.BridgeMessenger(udpSocket=udpSocket,bridgeAddress=(bridgeAdd[0],bridgeAdd[1]))
     else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        myPublicIp=get('https://api.ipify.org').text
-        sock.bind((myPublicIp,1102))
+        try:
+            sock.bind((tuple(seenAs)[0],1102))
+        except Exception as e:
+            sock.bind((tcpSocket.getsockname()[0],1102))
         result = serverMessenger.askForConnectionToDevice(device, behindNat,sock.getsockname())
         options=result["options"]
         bridgeMessenger=msg.BridgeMessenger(udpSocket=sock)
@@ -92,20 +94,20 @@ def getDevicesForBridge(bridgeID):
     return  devices
 
 
-def authorizate(login,password):
+def authorize(login,password):
     result=serverMessenger.sendAuthorizationRequest(login,password)
     if result["response"]=="access_granted":
         return int(result["UserID"])
     else:
         return False
 
-def udpTunnel():
+def udpTunnel(address):
     global udpSocket
     print("sender started")
     while True:
         if stopUdpSender:
             return
-        udpSocket.sendto(("keepalive connected as"+seenAs).encode(),('localhost', 1101))
+        udpSocket.sendto(("keepalive connected as"+seenAs).encode(),(address, 1101))
         time.sleep(2)
 # def waitForResult():
 #     while True:

@@ -58,7 +58,7 @@ class LoginScreen(Screen):
         self.serverLabel = Label(text='Server Add')
 
         self.serverInput = TextInput(multiline=False)
-        self.serverInput.text = "192.168.0.248"
+        self.serverInput.text = "zace.hopto.org"
 
         self.loginButton =Button(text='Login')
         self.loginButton.bind(on_press=self.login)
@@ -87,7 +87,7 @@ class LoginScreen(Screen):
 
     def login(self,button):
         if self.isConnected:
-            result=conn.authorizate(self.usernameInput.text, self.passwordInput.text)
+            result=conn.authorize(self.usernameInput.text, self.passwordInput.text)
             if result:
                 self.parent.current='screen2'
                 self.parent.screens[1].sessionLogin=self.usernameInput.text
