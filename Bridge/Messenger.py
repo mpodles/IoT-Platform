@@ -3,10 +3,10 @@ import socket
 import time
 import threading as thr
 import struct
-import Bridge.Setup as setup
+import Setup as setup
 from datetime import datetime
-import Bridge.Options
-import Bridge.Device
+import Options
+import Device
 
 serverMessenger=None
 
@@ -27,7 +27,7 @@ devicesInModule=None
 boundDevices=None
 
 
-def connectToServer(address='localhost',port=1100):
+def connectToServer(address='zace.hopto.org',port=1200):
     global serverMessenger
     global seenAs
     #global tcpSocket
@@ -37,7 +37,7 @@ def connectToServer(address='localhost',port=1100):
     print("I'm seen as tcp: ",seenAs)
     serverMessenger = OutsideServerMessenger(tcpSocket=tcpSocket)
 
-    sender = thr.Thread(target=udpTunnel, args=())
+    sender = thr.Thread(target=udpTunnel, args=(address,))
     #receiver.start()
     sender.start()
 
@@ -47,12 +47,12 @@ def registerBridge():
     serverMessenger.sendRegistrationRequest()
 
 
-def udpTunnel():
+def udpTunnel(address):
     global udpSocket
     udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print("udp sender started")
     while True:
-        udpSocket.sendto(("keepalive connected as"+seenAs).encode(),('localhost', 1100))
+        udpSocket.sendto(("keepalive connected as"+seenAs).encode(),(address, 1200))
         time.sleep(2)
 
 
@@ -218,6 +218,8 @@ class BridgeToModuleMessenger:
                     data=self.recv_msg()
                     if data is not None:
                         self.interpretMessage(bytearray.decode(data))
+                    else:
+                        raise Exception("GOT NONE AS DATA")
                 except Exception as e:
                     print("error at bridge to module receiver+interpreter", e)
                     global devicesInModule
@@ -348,7 +350,10 @@ class ModuleToBridgeMessenger:
                 data=self.recv_msg()
                 if data is not None:
                     self.interpretMessage(bytearray.decode(data))
+                else:
+                    raise Exception("GOT NONE AS DATA")
             except Exception as e:
+                print("bridge to module receiver exception", e)
                 return
 
 
@@ -442,6 +447,10 @@ class OutsideServerMessenger:
         global udpSocket
         global messengersToModules
         global clientMessenger
+        if clientMessenger is not None:
+            clientMessenger.stopSender=True
+            clientMessenger.stopReceiver=True
+            clientMessenger.stopChecker=True
         deviceName=data["deviceName"]
         deviceAddress=data["deviceAddress"]
         clientAddress=data["clientAddress"]

@@ -3,13 +3,13 @@ import socket
 import sys
 import threading as thr
 import time
-from util import *
-import Bridge.Setup as setup
-import Bridge.Messenger as msg
+import Setup as setup
+import Messenger as msg
 
 
 if __name__ == '__main__':
-    msg.connectToServer()
+    ipAdd="192.168.1.17"
+    msg.connectToServer(ipAdd)
     msg.registerBridge()
     modulesThread = thr.Thread(target=msg.awaitForModules)
     modulesThread.start()
