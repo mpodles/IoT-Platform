@@ -144,7 +144,7 @@ class Messenger:
         devices = devices.replace("(", '[')
         devices = devices.replace(")", ']')
         devices = json.loads(devices)
-        check = dbc.select("Bridges", rows="*",
+        check = dbc.select("bridges", rows="*",
                            condition='Name="' + str(bridgeName) + '"')
         if check.__len__() > 0:
             bridgeId = check[0][0]
@@ -169,7 +169,7 @@ class Messenger:
         devices = data["devices"]
         devices = devices.replace("'", '"')
         devices = json.loads(devices)
-        check = dbc.select("Bridges", rows="*",
+        check = dbc.select("bridges", rows="*",
                            condition='Name="' + str(bridgeName) + '"')
         if check.__len__() > 0:
             bridgeId = check[0][0]
@@ -294,7 +294,7 @@ class Messenger:
 
     def handleAuthentication(self, data):
         login, password = data["login"], data["password"]
-        result = dbc.select("users", rows="*", condition='login="' + login + '" AND password="' + password + '"')
+        result = dbc.select("users", rows="*", condition='Login="' + login + '" AND Password="' + password + '"')
         if result.__len__() > 0:
             userID = result[0][0]
             dictionaryToJson = {"type": "authorizationResponse", "response": "access_granted", "UserID": userID}
@@ -324,6 +324,8 @@ class Messenger:
                 data = self.recv_msg()
                 if data is not None:
                     self.interpretMessage(bytearray.decode(data))
+                if data is None:
+                    raise Exception("GOT NONE AS DATA")
         except Exception as e:
             print("receiver exception", e)
             if self in clientsMessengers.values():
@@ -382,10 +384,10 @@ class Messenger:
 
 
 if __name__ == '__main__':
-    # dbc.createDatabaseAndTables("localhost","root","password")
-    ipAdd = "192.168.1.17"
+    #dbc.createDatabaseAndTables("192.168.1.12","root","password")
+    myIpAdd = "localhost"
 
-    dbc.connectToDatabase("localhost", "root", "password")
+    dbc.connectToDatabase("192.168.1.12", "root", "password")
     dbc.clearTables()
 
     bridgesMessengers = {}
@@ -395,8 +397,8 @@ if __name__ == '__main__':
     bridgesUdpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     clientsUdpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    bridgesUdpSocket.bind((ipAdd, 1100))
-    clientsUdpSocket.bind((ipAdd, 1101))
+    bridgesUdpSocket.bind((myIpAdd, 1100))
+    clientsUdpSocket.bind((myIpAdd, 1101))
 
     clientsUdpProcess = thread.Thread(target=udpReceiver, args=(clientsUdpSocket,))
     # clientsProcess.daemon = True
@@ -408,8 +410,8 @@ if __name__ == '__main__':
     bridgesTcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     clientsTcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    bridgesTcpSocket.bind((ipAdd, 1100))
-    clientsTcpSocket.bind((ipAdd, 1101))
+    bridgesTcpSocket.bind((myIpAdd, 1100))
+    clientsTcpSocket.bind((myIpAdd, 1101))
 
     clientsProcess = thread.Thread(target=listenForClients, args=(clientsTcpSocket,))
     # clientsProcess.daemon = True

@@ -71,42 +71,96 @@ def createDatabaseAndTables(host, user, password):
             mycursor.execute(
                 "CREATE TABLE `users` (`UserID` int(11) NOT NULL,`Login` varchar(15) NOT NULL,`Password` varchar(30) NOT NULL)")
 
-        # TODO MAKE IF STATEMENTS HERE
-        mycursor.execute("ALTER TABLE `bridges` ADD PRIMARY KEY (`BridgeID`), ADD KEY `UserID` (`UserID`)")
-        mycursor.execute("ALTER TABLE `bridges` MODIFY `BridgeID` int(11) NOT NULL AUTO_INCREMENT")
+
+        try:
+            mycursor.execute("ALTER TABLE `bridges` ADD PRIMARY KEY (`BridgeID`), ADD KEY `UserID` (`UserID`)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `bridges` MODIFY `BridgeID` int(11) NOT NULL AUTO_INCREMENT")
+        except Exception as e:
+            print(e)
         # mycursor.execute("ALTER TABLE `bridges` ADD CONSTRAINT `Bridges_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`)")
-
-        mycursor.execute("ALTER TABLE `devices` ADD PRIMARY KEY (`DeviceID`), ADD KEY `BridgeID` (`BridgeID`)")
-        mycursor.execute("ALTER TABLE `devices` MODIFY `DeviceID` int(11) NOT NULL AUTO_INCREMENT")
+        try:
+            mycursor.execute("ALTER TABLE `devices` ADD PRIMARY KEY (`DeviceID`), ADD KEY `BridgeID` (`BridgeID`)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `devices` MODIFY `DeviceID` int(11) NOT NULL AUTO_INCREMENT")
+        except Exception as e:
+            print(e)
         # mycursor.execute("ALTER TABLE `devices` ADD CONSTRAINT `Devices_ibfk_1` FOREIGN KEY (`BridgeID`) REFERENCES `bridges` (`BridgeID`)")
-
-        mycursor.execute("ALTER TABLE `users` ADD PRIMARY KEY (`UserID`), ADD UNIQUE KEY `Login` (`Login`)")
-        mycursor.execute("ALTER TABLE `users` MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT")
+        try:
+            mycursor.execute("ALTER TABLE `users` ADD PRIMARY KEY (`UserID`), ADD UNIQUE KEY `Login` (`Login`)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `users` MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT")
+        except Exception as e:
+            print(e)
 
 
 
     else:
-        mycursor.execute("CREATE DATABASE iotplatform")
-        myDB = mysql.connector.connect(host=host, user=user, passwd=password, database="iotplatform")
-        mycursor = myDB.cursor()
-        mycursor.execute(
-            "CREATE TABLE `bridges` (`BridgeID` int(11) NOT NULL,`UserID` int(11) NOT NULL, `Address` varchar(255) NOT NULL, `Name` varchar(255) NOT NULL) ")
-        mycursor.execute(
-            "CREATE TABLE `devices` ( `DeviceID` int(11) NOT NULL,`Address` varchar(255) NOT NULL,`Name` varchar(255) DEFAULT NULL,`Type` varchar(255) DEFAULT NULL,`BridgeID` int(11) NOT NULL)")
-        mycursor.execute("CREATE TABLE `options` (`Type` varchar(255) NOT NULL, `DeviceOption` varchar(255) NOT NULL)")
-        mycursor.execute(
-            "CREATE TABLE `users` (`UserID` int(11) NOT NULL,`Login` varchar(15) NOT NULL,`Password` varchar(30) NOT NULL)")
-        mycursor.execute("ALTER TABLE `bridges` ADD PRIMARY KEY (`BridgeID`), ADD KEY `UserID` (`UserID`)")
-        mycursor.execute("ALTER TABLE `bridges` MODIFY `BridgeID` int(11) NOT NULL AUTO_INCREMENT")
-        mycursor.execute(
-            "ALTER TABLE `bridges` ADD CONSTRAINT `Bridges_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`)")
-        mycursor.execute("CREATE TABLE `options` (`Type` varchar(255) NOT NULL, `DeviceOption` varchar(255) NOT NULL)")
-        mycursor.execute("ALTER TABLE `devices` ADD PRIMARY KEY (`DeviceID`), ADD KEY `BridgeID` (`BridgeID`)")
-        mycursor.execute("ALTER TABLE `devices` MODIFY `DeviceID` int(11) NOT NULL AUTO_INCREMENT")
-        mycursor.execute(
-            "ALTER TABLE `devices` ADD CONSTRAINT `Devices_ibfk_1` FOREIGN KEY (`BridgeID`) REFERENCES `bridges` (`BridgeID`)")
-        mycursor.execute("ALTER TABLE `users` ADD PRIMARY KEY (`UserID`), ADD UNIQUE KEY `Login` (`Login`)")
-        mycursor.execute("ALTER TABLE `users` MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT")
+        try:
+            mycursor.execute("CREATE DATABASE iotplatform")
+        except Exception as e:
+            print(e)
+        try:
+            myDB = mysql.connector.connect(host=host, user=user, passwd=password, database="iotplatform")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor = myDB.cursor()
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("CREATE TABLE `bridges` (`BridgeID` int(11) NOT NULL,`UserID` int(11) NOT NULL, `Address` varchar(255) NOT NULL, `Name` varchar(255) NOT NULL) ")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("CREATE TABLE `devices` ( `DeviceID` int(11) NOT NULL,`Address` varchar(255) NOT NULL,`Name` varchar(255) DEFAULT NULL,`Type` varchar(255) DEFAULT NULL,`BridgeID` int(11) NOT NULL)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("CREATE TABLE `options` (`Type` varchar(255) NOT NULL, `DeviceOption` varchar(255) NOT NULL)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("CREATE TABLE `users` (`UserID` int(11) NOT NULL,`Login` varchar(15) NOT NULL,`Password` varchar(30) NOT NULL)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `bridges` ADD PRIMARY KEY (`BridgeID`), ADD KEY `UserID` (`UserID`)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `bridges` MODIFY `BridgeID` int(11) NOT NULL AUTO_INCREMENT")
+        except Exception as e:
+            print(e)
+        
+        #mycursor.execute("ALTER TABLE `bridges` ADD CONSTRAINT `Bridges_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`)")
+        try:
+            mycursor.execute("CREATE TABLE `options` (`Type` varchar(255) NOT NULL, `DeviceOption` varchar(255) NOT NULL)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `devices` ADD PRIMARY KEY (`DeviceID`), ADD KEY `BridgeID` (`BridgeID`)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `devices` MODIFY `DeviceID` int(11) NOT NULL AUTO_INCREMENT")
+        except Exception as e:
+            print(e)
+        #mycursor.execute("ALTER TABLE `devices` ADD CONSTRAINT `Devices_ibfk_1` FOREIGN KEY (`BridgeID`) REFERENCES `bridges` (`BridgeID`)")
+        try:
+            mycursor.execute("ALTER TABLE `users` ADD PRIMARY KEY (`UserID`), ADD UNIQUE KEY `Login` (`Login`)")
+        except Exception as e:
+            print(e)
+        try:
+            mycursor.execute("ALTER TABLE `users` MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT")
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':

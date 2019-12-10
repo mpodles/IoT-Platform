@@ -27,7 +27,7 @@ devicesInModule=None
 boundDevices=None
 
 
-def connectToServer(address='zace.hopto.org',port=1200):
+def connectToServer(address='zace.hopto.org',port=1100):
     global serverMessenger
     global seenAs
     #global tcpSocket
@@ -52,7 +52,7 @@ def udpTunnel(address):
     udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print("udp sender started")
     while True:
-        udpSocket.sendto(("keepalive connected as"+seenAs).encode(),(address, 1200))
+        udpSocket.sendto(("keepalive connected as"+seenAs).encode(),(address, 1100))
         time.sleep(2)
 
 

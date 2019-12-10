@@ -8,7 +8,7 @@ import Messenger as msg
 
 
 if __name__ == '__main__':
-    ipAdd="192.168.1.17"
+    ipAdd="localhost"
     msg.connectToServer(ipAdd)
     msg.registerBridge()
     modulesThread = thr.Thread(target=msg.awaitForModules)
