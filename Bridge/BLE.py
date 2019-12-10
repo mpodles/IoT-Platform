@@ -1,15 +1,13 @@
 import time
 
-import Messenger as msg
-import Device as dev
-import Options as opt
+import API as api
 
 
 
-devices= [dev.Device("deviceadd1","devicename1"),dev.Device("deviceadd2","devicename2","ble"),dev.Device("deviceadd3","devicename3","ble")]
-options=[opt.Options("ble",["read","write","subscribe"])]
-device =dev.Device("deviceadd1","devicename1","ble")
-device2 =dev.Device("deviceadd3","devicename3","ble")
+devices= [api.Device("deviceadd1","devicename1"),api.Device("deviceadd2","devicename2","ble"),api.Device("deviceadd3","devicename3","ble")]
+options=[api.Options("ble",["read","write","subscribe"])]
+device =api.Device("deviceadd1","devicename1","ble")
+device2 =api.Device("deviceadd3","devicename3","ble")
 data= 30
 
 def on_option(option,data):
@@ -25,16 +23,16 @@ def on_data2(data):
     print ("REACHED BLE ON DATA2 ",data)
 
 
-msg.connectToBridge()
-msg.registerDevices(devices)
-msg.registerOptions(options)
-msg.bind(device=device,on_data=on_data,on_option=on_option)
-msg.bind(device=device2,on_data=on_data2,on_option=on_option2)
+api.connectToBridge()
+api.registerDevices(devices)
+api.registerOptions(options)
+api.bind(device=device,on_data=on_data,on_option=on_option)
+api.bind(device=device2,on_data=on_data2,on_option=on_option2)
 i=0
 while True:
     time.sleep(1)
-    msg.sendDataFromDevice(device,data+i)
-    msg.sendDataFromDevice(device2, data + 2*i)
+    api.sendDataFromDevice(device,data+i)
+    api.sendDataFromDevice(device2, data + 2*i)
     i+=15
     if i>2000:
         i=0
