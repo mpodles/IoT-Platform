@@ -39,6 +39,8 @@ def connectToServer(address='zace.hopto.org',port=1101):
         sender = thr.Thread(target=udpTunnel, args=(address,))
         sender.start()
         isConnectedToServer=True
+    else:
+        raise Exception("already connected")
 
 
 def connectToDevice(device,behindNat):
@@ -59,6 +61,7 @@ def connectToDevice(device,behindNat):
         try:
             sock.bind((tuple(seenAs)[0],1102))
         except Exception as e:
+            print(e)
             sock.bind((tcpSocket.getsockname()[0],1102))
         result = serverMessenger.askForConnectionToDevice(device, behindNat,sock.getsockname())
         options=result["options"]
@@ -75,6 +78,16 @@ def disconnectFromServer():
     connectedToServer = False
     stopUdpSender=True
     serverMessenger=None
+
+def receiveDataFromBridge():
+    global bridgeMessenger
+    return bridgeMessenger.receive()
+
+def sendDataToBridge(dictionaryToJson):
+    global bridgeMessenger
+    msg = bridgeMessenger.constructMessage(dictionaryToJson)
+    bridgeMessenger.send_udp_msg(msg)
+
 
 def disconnectFromBridge():
     global bridgeMessenger
@@ -99,7 +112,7 @@ def authorize(login,password):
     if result["response"]=="access_granted":
         return int(result["UserID"])
     else:
-        return False
+        raise Exception("access not granted")
 
 def udpTunnel(address):
     global udpSocket

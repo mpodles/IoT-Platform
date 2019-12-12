@@ -87,7 +87,11 @@ class LoginScreen(Screen):
 
     def login(self,button):
         if self.isConnected:
-            result=conn.authorize(self.usernameInput.text, self.passwordInput.text)
+            try:
+                result=conn.authorize(self.usernameInput.text, self.passwordInput.text)
+            except Exception as e:
+                makePopup("error",str(e))
+                return
             if result:
                 self.parent.current='screen2'
                 self.parent.screens[1].sessionLogin=self.usernameInput.text
@@ -186,7 +190,11 @@ class RegularScreen(Screen):
 
 
     def getDataForUser(self,button):
-        result=conn.getBridgesForUser(self.userID)
+        try:
+            result=conn.getBridgesForUser(self.userID)
+        except Exception as e:
+            makePopup("error", str(e))
+            return
         self.bridgesSpinner.values = []
         for bridge in result:
             self.bridges.append(bridge)
@@ -244,7 +252,7 @@ class RegularScreen(Screen):
 class ConnectedScreen(Screen):
     def __init__(self, **kwargs):
         super(ConnectedScreen, self).__init__(**kwargs)
-        self.messenger=None
+        #self.messenger=None
         self.receiverThread= None
         self.stopFlag=True
         self.options =None
@@ -290,7 +298,7 @@ class ConnectedScreen(Screen):
     def disconnect(self,button):
         self.stopFlag=True #stop receiving
         conn.disconnectFromBridge() #tell messenger to send disconnect info and stop sending keepalives
-        self.messenger=None #delete messenger
+        #self.messenger=None #delete messenger
         time.sleep(2) #wait for server to update
         self.parent.current = "screen2"
         if button == 'error':
@@ -303,7 +311,7 @@ class ConnectedScreen(Screen):
                 print("stopping getting data from bridge")
                 return
             try:
-                data=self.messenger.receive()
+                data=conn.receiveDataFromBridge()
             except Exception as e:
                 print("bridge receiver error",e)
                 makePopup("Error", "Lost bridge connection")
@@ -335,8 +343,7 @@ class ConnectedScreen(Screen):
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text
         dictionaryToJson = {"type": "consoleMessage","deviceAddress":self.connectedDevice[1], "deviceName": self.connectedDevice[2],"payload":self.textInput.text}
-        msg = self.messenger.constructMessage(dictionaryToJson)
-        self.messenger.send_udp_msg(msg)
+        conn.sendDataToBridge(dictionaryToJson)
         self.textInput.text=""
         self.textField.scroll_to(self.textInput)
 
@@ -355,8 +362,7 @@ class ConnectedScreen(Screen):
         self.textLabel.text += '\n Sent command "'+command+'": ' + self.textInput.text
         dictionaryToJson = {"type": "consoleCommand", "command":command,"deviceAddress": self.connectedDevice[1],
                             "deviceName": self.connectedDevice[2], "payload": self.textInput.text}
-        msg = self.messenger.constructMessage(dictionaryToJson)
-        self.messenger.send_udp_msg(msg)
+        conn.sendDataToBridge(dictionaryToJson)
         self.textInput.text = ""
         self.textField.scroll_to(self.textInput)
 
