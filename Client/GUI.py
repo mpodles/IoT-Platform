@@ -19,6 +19,7 @@ from kivy.core.window import Window
 from kivy.uix.spinner import Spinner
 from multiprocessing import freeze_support
 import threading as thr
+from datetime import  datetime
 from kivy.clock import Clock
 from functools import partial
 import json
@@ -58,7 +59,7 @@ class LoginScreen(Screen):
         self.serverLabel = Label(text='Server Add')
 
         self.serverInput = TextInput(multiline=False)
-        self.serverInput.text = "zace.hopto.org"
+        self.serverInput.text = "localhost"
 
         self.loginButton =Button(text='Login')
         self.loginButton.bind(on_press=self.login)
@@ -77,13 +78,14 @@ class LoginScreen(Screen):
         self.add_widget(self.layout)
 
     def connect(self,button):
+        add = self.serverInput.text
         try:
-            add=self.serverInput.text
             conn.connectToServer(address=add)
-            makePopup("info","Connected")
-            self.isConnected=True
         except Exception as e:
             makePopup("error", str(e))
+            return
+        makePopup("info", "Connected")
+        self.isConnected = True
 
     def login(self,button):
         if self.isConnected:
@@ -92,14 +94,11 @@ class LoginScreen(Screen):
             except Exception as e:
                 makePopup("error",str(e))
                 return
-            if result:
-                self.parent.current='screen2'
-                self.parent.screens[1].sessionLogin=self.usernameInput.text
-                self.parent.screens[1].sessionPassword = self.passwordInput.text
-                self.parent.screens[1].userID = result
-                Window.size=1000,800
-            else:
-                makePopup("error", "login/password not found")
+            self.parent.current='screen2'
+            self.parent.screens[1].sessionLogin=self.usernameInput.text
+            self.parent.screens[1].sessionPassword = self.passwordInput.text
+            self.parent.screens[1].userID = result
+            Window.size=1000,800
         else:
             makePopup("error","not connected to server")
 
@@ -185,7 +184,7 @@ class RegularScreen(Screen):
                 devicesRow.add_widget(connectButton)
                 self.devicesList.add_widget(devicesRow)
         except Exception as e:
-            print("Error changing bridge ",e)
+            print("Error changing bridge ",str(e))
 
 
 
@@ -193,12 +192,15 @@ class RegularScreen(Screen):
         try:
             result=conn.getBridgesForUser(self.userID)
         except Exception as e:
-            makePopup("error", str(e))
+            makePopup("error getting bridges ", str(e))
             return
         self.bridgesSpinner.values = []
         for bridge in result:
             self.bridges.append(bridge)
-            devices=conn.getDevicesForBridge(bridge[0])
+            try:
+                devices=conn.getDevicesForBridge(bridge[0])
+            except Exception as e:
+                makePopup("error getting devices ",str(e))
             self.devices["Address: "+str(bridge[2])+"\n Name: "+str(bridge[3])]=devices
             self.bridgesSpinner.values.append("Address: "+str(bridge[2])+"\n Name: "+str(bridge[3]))
         self.bridgesSpinner.text = "Choose your bridge"
@@ -332,13 +334,18 @@ class ConnectedScreen(Screen):
             self.disconnect("error")
             return None,None
         else:
-            parsedData=json.loads(data)
-            deviceName=parsedData["deviceName"]
-            deviceAddress=parsedData["deviceAddress"]
-            if self.connectedDevice[1]==deviceAddress and self.connectedDevice[2]==deviceName:
-                return parsedData["time"],parsedData["data"]
-            else:
-                return None,None
+            try:
+                parsedData=json.loads(data)
+                deviceName=parsedData["deviceName"]
+                deviceAddress=parsedData["deviceAddress"]
+                if self.connectedDevice[1]==deviceAddress and self.connectedDevice[2]==deviceName:
+                    return parsedData["time"],parsedData["data"]
+                else:
+                    return None,None
+            except Exception as e:
+                print("exception pparsing received data ",e)
+                return datetime.now().time(),data
+
 
     def sendMessage(self,button):
         self.textLabel.text+="\n Sent: "+self.textInput.text

@@ -256,7 +256,6 @@ class Messenger:
             deviceAddress = result[0][1]
             deviceName = result[0][2]
             deviceType = result[0][3]
-            clientAddressKey = (str(self.peerAdd.split(":")[0]), int(self.peerAdd.split(":")[1]))
             options = self.getOptionsByType(deviceType)
             bridgeID = result[0][4]
             findBridge = dbc.select("bridges", rows="Address", condition='BridgeID="' + str(bridgeID) + '"')
@@ -267,6 +266,7 @@ class Messenger:
             dictionaryToJson = {"type": "devicesConnectionResponse", "response": "sentAddressToBridge",
                                 "options": options}
             if behindNat:
+                clientAddressKey = (str(self.peerAdd.split(":")[0]), int(self.peerAdd.split(":")[1]))
                 print(tcpToUdpMap)
                 try:
                     requestToBridgeDictToJson["clientAddress"] = tcpToUdpMap[clientAddressKey]

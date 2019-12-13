@@ -1,8 +1,8 @@
 import time
 
 import Bridge.Messenger as msg
-import Bridge.Device as dev
-import Bridge.Options as opt
+import Bridge.DeviceTODELETE as dev
+import Bridge.OptionsTODELETE as opt
 
 
 

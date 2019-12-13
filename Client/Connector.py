@@ -38,7 +38,7 @@ def connectToServer(address='zace.hopto.org',port=1101):
         serverMessenger = msg.ServerMessenger(tcpSocket=tcpSocket)
         sender = thr.Thread(target=udpTunnel, args=(address,))
         sender.start()
-        isConnectedToServer=True
+        connectedToServer=True
     else:
         raise Exception("already connected")
 
