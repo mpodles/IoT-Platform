@@ -406,7 +406,6 @@ class OutsideServerMessenger:
         self.senderThread= thr.Thread(target=self.sender)
         self.senderThread.start()
         self.receiverThread = thr.Thread(target=self.receiver, args=())
-
         self.receiverThread.start()
         #self.senderProcess.start()
 

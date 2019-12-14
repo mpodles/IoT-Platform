@@ -23,7 +23,7 @@ connectedToServer=False
 
 stopUdpSender=False
 
-def connectToServer(address='zace.hopto.org',port=1101):
+def connectToServer(address='localhost',port=1101):
     global serverMessenger
     global seenAs
     global tcpSocket
@@ -31,12 +31,13 @@ def connectToServer(address='zace.hopto.org',port=1101):
     global connectedToServer
     if not connectedToServer:
         tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcpSocket.settimeout(10)
         tcpSocket.connect((address,port))
-        udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         seenAs=bytes.decode(tcpSocket.recv(1024))
         print("I'm seen as tcp: ",seenAs)
         serverMessenger = msg.ServerMessenger(tcpSocket=tcpSocket)
         sender = thr.Thread(target=udpTunnel, args=(address,))
+        udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sender.start()
         connectedToServer=True
     else:
@@ -108,11 +109,14 @@ def getDevicesForBridge(bridgeID):
 
 
 def authorize(login,password):
-    result=serverMessenger.sendAuthorizationRequest(login,password)
-    if result["response"]=="access_granted":
-        return int(result["UserID"])
+    if connectedToServer:
+        result=serverMessenger.sendAuthorizationRequest(login,password)
+        if result["response"]=="access_granted":
+            return int(result["UserID"])
+        else:
+            raise Exception("access not granted")
     else:
-        raise Exception("access not granted")
+        raise  Exception("not connected to server")
 
 def udpTunnel(address):
     global udpSocket

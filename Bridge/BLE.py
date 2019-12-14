@@ -388,10 +388,11 @@ api.registerOptions(options)
 api.bind(device=device,on_data=on_data,on_option=on_option)
 api.bind(device=device2,on_data=on_data2,on_option=on_option2)
 i=0
+data2=10
 while True:
     time.sleep(5)
-    api.sendDataFromDevice(device,data)
-    #api.sendDataFromDevice(device2, data + 2*i)
+    api.sendDataFromDevice(device,data2+i)
+    api.sendDataFromDevice(device2, data2 + 2*i)
     i+=15
     if i>2000:
         i=0

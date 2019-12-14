@@ -48,7 +48,9 @@ class BridgeMessenger:
             data, addr = self.udpSocket.recvfrom(100000)
             self.bridgeAddress = addr
             if data is not None:
-                return bytes.decode(data)
+                data=bytes.decode(data)
+                if data != 'k!e@e#p$a%l^i&v*e(':
+                    return data
             else:
                 print ("GOT NONE CHECK THIS")
 
@@ -161,15 +163,18 @@ class ServerMessenger:
 
 
     def getResult(self):
+        print("gettingResult")
+        data = self.recv_msg()
+        if data is None:
+            raise Exception("Connection closed")
+        data=bytearray.decode(data)
+        print("result is", data)
         try:
-            print("gettingResult")
-            data=bytearray.decode(self.recv_msg())
-            print("result is",data)
-            dictData=json.loads(data)
-            return dictData
-                # self.interpretMessage(data)
+            dictData = json.loads(data)
         except Exception as e:
-            print(e)
+            print("error parsing server result ",e)
+            return
+        return dictData
 
     def constructMessage(self,data):
         data["messageID"]=self.messageId
@@ -202,11 +207,12 @@ class ServerMessenger:
         self.tcpSocket.sendall(msg)
         print("sent message ",msg)
 
-    def sender(self):
-        print("sender started")
-        while True:
-            self.udpSocket.sendto(("keepalive connected as" + self.seenAs).encode(), ('localhost', 1101))
-            time.sleep(2)
+    # def sender(self):
+    #     print("sender started")
+    #     while True:
+    #         self.udpSocket.sendto(("keepalive connected as" + self.seenAs).encode(), ('localhost', 1101))
+    #         time.sleep(2)
+
     # def interpretMessage(self, data):
     #     print("received", data)
     #     parsedData = json.loads(data)

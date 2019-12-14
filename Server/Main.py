@@ -89,8 +89,11 @@ def udpReceiver(socket):
     print("UDP receiver started")
     while True:
         data, addr = socket.recvfrom(1024)
-        addrAndPort = bytes.decode(data)[22:].split(",")
-        key = (str(addrAndPort[0][2:-1]), int(addrAndPort[1][:-1]))
+        try:
+            addrAndPort = bytes.decode(data)[22:].split(",")
+            key = (str(addrAndPort[0][2:-1]), int(addrAndPort[1][:-1]))
+        except Exception as e:
+            print(e)
         tcpToUdpMap[key] = tuple(addr)
         # print(tcpToUdpMap)
 

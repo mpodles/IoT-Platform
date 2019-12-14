@@ -40,7 +40,6 @@ def makePopup(title,text):
 class LoginScreen(Screen):
     def __init__(self, **kwargs):
         super(LoginScreen, self).__init__(**kwargs)
-        self.isConnected = False
         Window.size=500,300
 
         self.layout = GridLayout()
@@ -85,22 +84,18 @@ class LoginScreen(Screen):
             makePopup("error", str(e))
             return
         makePopup("info", "Connected")
-        self.isConnected = True
 
     def login(self,button):
-        if self.isConnected:
-            try:
-                result=conn.authorize(self.usernameInput.text, self.passwordInput.text)
-            except Exception as e:
-                makePopup("error",str(e))
-                return
-            self.parent.current='screen2'
-            self.parent.screens[1].sessionLogin=self.usernameInput.text
-            self.parent.screens[1].sessionPassword = self.passwordInput.text
-            self.parent.screens[1].userID = result
-            Window.size=1000,800
-        else:
-            makePopup("error","not connected to server")
+        try:
+            result = conn.authorize(self.usernameInput.text, self.passwordInput.text)
+        except Exception as e:
+            makePopup("error", str(e))
+            return
+        self.parent.current = 'screen2'
+        self.parent.screens[1].sessionLogin = self.usernameInput.text
+        self.parent.screens[1].sessionPassword = self.passwordInput.text
+        self.parent.screens[1].userID = result
+        Window.size = 1000, 800
 
 
 
@@ -327,9 +322,7 @@ class ConnectedScreen(Screen):
 
 
     def interpretData(self,data):
-        if data =='k!e@e#p$a%l^i&v*e(':
-            return None,None
-        elif data=="ERROR: Module disconnected":
+        if data=="ERROR: Module disconnected":
             makePopup("Error", "Module with device disconnected")
             self.disconnect("error")
             return None,None
